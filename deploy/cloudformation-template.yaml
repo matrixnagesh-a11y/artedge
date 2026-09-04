@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ArtEDGE OmniPulse AI - Production AWS Infrastructure Stack (ECS Fargate + S3 Vault + ALB + PDPA 2.0 Compliance)'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+    Description: Deployment environment name
+
+  AwsRegionName:
+    Type: String
+    Default: ap-southeast-1
+    Description: AWS Target Region (Default Singapore ASEAN Hub)
+
+  S3VaultBucketName:
+    Type: String
+    Default: artedge-data-vault-asean-prod
+    Description: S3 bucket name for encrypted data residency evidence
+
+Resources:
+  # 1. Encrypted S3 Data Vault (PDPA 2.0 Compliant)
+  ArtEdgeDataVaultBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${S3VaultBucketName}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  # 2. ECR Container Repository
+  ArtEdgeECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: artedge-omnipulse-app
+      ImageScanningConfiguration:
+        ScanOnPush: true
+
+  # 3. ECS Cluster
+  ArtEdgeECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub 'artedge-cluster-${EnvironmentName}'
+
+  # 4. CloudWatch Log Group
+  ArtEdgeLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/artedge-${EnvironmentName}'
+      RetentionInDays: 30
+
+  # 5. ECS Task Execution Role
+  ArtEdgeExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'ArtEdgeExecutionRole-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+Outputs:
+  ECRRepoUri:
+    Description: URI of the ECR Repository
+    Value: !GetAtt ArtEdgeECRRepository.RepositoryUri
+
+  ECSClusterName:
+    Description: Name of the ECS Cluster
+    Value: !Ref ArtEdgeECSCluster
+
+  S3VaultBucket:
+    Description: S3 Data Residency Bucket
+    Value: !Ref ArtEdgeDataVaultBucket

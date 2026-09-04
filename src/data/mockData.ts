@@ -1651,7 +1651,7 @@ export const MOCK_COMPLIANCE: ComplianceRecord = {
     {
       destinationCountry: "Singapore",
       lawfulBasis: "Standard Contractual Clauses & ASEAN Cross-Border Data Transfer Framework",
-      safeguards: "AES-256 Encryption at Rest & In-Transit with Supabase Vault Key Rotation",
+      safeguards: "AES-256 Encryption at Rest & In-Transit with AWS KMS Key Rotation & AWS S3 Vault",
     },
   ],
 };

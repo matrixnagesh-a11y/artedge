@@ -1,5 +1,5 @@
 -- ArtEDGE / OmniPulse AI Database Schema & Multi-Tenant RLS Policies
--- PostgreSQL / Supabase Compatible
+-- Native AWS RDS PostgreSQL / Aurora Serverless Compatible (pgvector + RLS)
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 -- 2. User Profiles
 CREATE TABLE IF NOT EXISTS profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'analyst',
     avatar_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -110,10 +110,10 @@ ALTER TABLE content_items ENABLE ROW LEVEL SECURITY;
 
 -- Tenant Isolation Policies
 CREATE POLICY tenant_isolation_profiles ON profiles
-    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
+    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = CURRENT_USER::UUID));
 
 CREATE POLICY tenant_isolation_entities ON entities
-    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
+    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = CURRENT_USER::UUID));
 
 CREATE POLICY tenant_isolation_content_items ON content_items
-    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
+    FOR ALL USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = CURRENT_USER::UUID));

@@ -3,19 +3,30 @@
   "awsAccountId": "715616248593",
   "environment": "production",
   "awsRegion": "ap-southeast-1",
+  "amplify": {
+    "appId": "d19bya2t6nfjsj",
+    "defaultDomain": "d19bya2t6nfjsj.amplifyapp.com",
+    "productionUrl": "https://main.d19bya2t6nfjsj.amplifyapp.com",
+    "cloudFrontTarget": "dz92hikd28uu5.cloudfront.net",
+    "customDomain": "artedge.app",
+    "acmCertValidation": {
+      "type": "CNAME",
+      "name": "_03cecfb6936e36df228c37dc696f64b8",
+      "target": "_ea50cb52a2188a7187561c935dc0e61c.jkddzztszm.acm-validations.aws."
+    }
+  },
   "s3DataResidencyVault": "s3://artedge-vault-715616248593-ap-southeast-1",
   "ecrRepositoryUri": "715616248593.dkr.ecr.ap-southeast-1.amazonaws.com/artedge-production",
   "infrastructure": {
-    "computeType": "AWS App Runner & AWS ECS Fargate",
+    "computeType": "AWS Amplify Hosting (Next.js SSR) & AWS ECS Fargate",
     "database": "Amazon RDS PostgreSQL with Row-Level Security",
     "encryption": "AES-256 Server-Side Encryption (KMS)",
     "securityCompliance": "Malaysian PDPA 2.0 & Cross-Border Sovereign Data Residency"
   },
   "endpoints": {
-    "awsConsoleStack": "https://715616248593.ap-southeast-1.console.aws.amazon.com/apprunner/home?region=ap-southeast-1",
+    "amplifyConsole": "https://ap-southeast-1.console.aws.amazon.com/amplify/home?region=ap-southeast-1#/d19bya2t6nfjsj",
     "s3ConsoleUrl": "https://s3.console.aws.amazon.com/s3/buckets/artedge-vault-715616248593-ap-southeast-1?region=ap-southeast-1",
     "localRunningServer": "http://localhost:3001"
   },
-  "deployedAt": "2026-09-01T06:43:05.324Z",
-  "status": "PROVISIONED_AND_VERIFIED"
+  "status": "HOSTED_ON_AMPLIFY"
 }

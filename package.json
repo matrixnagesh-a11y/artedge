@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx scripts/verify-logic.ts",
     "deploy:aws": "node deploy/aws-deploy-project.mjs",
     "deploy:verify": "node deploy/aws-verify-ecr-secrets.mjs"
   },
@@ -33,6 +35,7 @@
     "@types/react-dom": "^18.3.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.5",
+    "tsx": "^4.23.13",
     "typescript": "^5.5.4"
   }
 }

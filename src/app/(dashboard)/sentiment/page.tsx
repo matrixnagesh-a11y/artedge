@@ -228,8 +228,8 @@ export default function SentimentAnalysisPage() {
               </span>
             </div>
             <p className="text-slate-300 mt-1">
-              • <strong>Active Local App Node:</strong> <code className="text-primary-light font-mono font-bold">http://localhost:3001</code> (Fully functional with instant live updates).<br />
-              • <strong>Public Custom Domain:</strong> <code className="text-green font-mono">artedge.app</code> (Requires pointing your domain's DNS A/CNAME records in AWS Route 53 or your registrar to the CloudFront CDN).<br />
+              • <strong>Active Workspace Instance:</strong> <code className="text-primary-light font-mono font-bold">ArtEDGE Cloud Instance (Active)</code> (Real-time telemetry and forensic updates).<br />
+              • <strong>Public Custom Domain:</strong> <code className="text-green font-mono">artedge.app</code> (Point DNS A/CNAME to AWS CloudFront CDN Target).<br />
               • <strong>S3 Data Residency Vault:</strong> <code className="text-slate-300 font-mono">artedge-data-residency-vault-ap-southeast-5</code> (PDPA 2.0 KMS Encrypted).
             </p>
           </div>

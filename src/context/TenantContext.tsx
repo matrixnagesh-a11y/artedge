@@ -182,36 +182,37 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 const defaultInitDataset = generateReplenishedDataset({
-  brandName: "Nikhil Kumaraswamy",
+  brandName: "Xi Jinping",
   entityType: "individual",
-  competitorNames: ["C.P. Yogeshwara", "D.K. Suresh", "H.D. Kumaraswamy", "A. Manjunath"],
-  industry: "politics",
-  region: "India",
+  competitorNames: [],
+  isSingleEntity: true,
+  industry: "global_diplomacy",
+  region: "Global / Asia",
 });
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tenants, setTenants] = useState<Tenant[]>(MOCK_TENANTS);
   const [activeTenant, setActiveTenant] = useState<Tenant>({
     ...MOCK_TENANTS[0],
-    name: "Nikhil Kumaraswamy Intelligence (Personal Brand)",
+    name: "Xi Jinping Strategic Intelligence (Statesmanship & Global Diplomacy)",
     mode: "personal_brand",
   });
   const [user, setUser] = useState<UserProfile>(MOCK_USER);
   const [entities, setEntities] = useState<Entity[]>([
     {
-      id: "ent-nikhil",
+      id: "ent-xijinping",
       tenantId: "tenant-active",
-      name: "Nikhil Kumaraswamy",
+      name: "Xi Jinping",
       type: "individual",
-      websiteUrl: "https://nikhilkumaraswamy.in",
-      socialUrls: { x: "https://x.com/nikhil_kswamy" },
-      industry: "Public Leadership & Politics",
-      country: "India",
-      state: "Karnataka",
-      city: "Ramanagara",
-      aliases: ["Nikhil Kumaraswamy", "Nikhil K", "Nikhil Ramanagara"],
-      hashtags: ["#NikhilKumaraswamy", "#Ramanagara", "#Channapatna", "#Karnataka"],
-      keywords: ["Nikhil", "Kumaraswamy", "Ramanagara", "Channapatna", "constituency"],
+      websiteUrl: "https://xijinping.org",
+      socialUrls: { x: "https://x.com/diplomatic_wire" },
+      industry: "Global Governance & Diplomacy",
+      country: "Global / Asia",
+      state: "Beijing",
+      city: "Beijing",
+      aliases: ["Xi Jinping", "General Secretary", "State President"],
+      hashtags: ["#XiJinping", "#GlobalDiplomacy", "#MultilateralTrade", "#Modernization"],
+      keywords: ["Xi Jinping", "Diplomacy", "Modernization", "Citizen Welfare", "Multilateral"],
       exclusions: [],
       isPrimary: true,
     },
@@ -626,15 +627,16 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setEntityTypeState(type);
     const currentName = primaryEntity?.name || "";
     const isCurrentlyIndividual = type === "individual";
-    const defaultBrand = isCurrentlyIndividual ? "Nikhil Kumaraswamy" : "Maybank";
+    const defaultBrand = isCurrentlyIndividual ? "Xi Jinping" : "Maybank";
     await replenishTenantData({
       brandName: currentName.includes("Maybank") || currentName.includes("Tan Sri") || currentName.includes("Nikhil") ? defaultBrand : currentName,
       entityType: type,
-      competitorNames: isCurrentlyIndividual
-        ? ["C.P. Yogeshwara", "D.K. Suresh", "H.D. Kumaraswamy", "A. Manjunath"]
-        : ["CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank"],
+      isSingleEntity: isCurrentlyIndividual,
+      competitorNames: isCurrentlyIndividual ? [] : ["CIMB Bank", "Public Bank", "RHB Bank", "Hong Leong Bank"],
+      industry: isCurrentlyIndividual ? "Global Governance & Diplomacy" : "Banking & Financial Services",
+      region: isCurrentlyIndividual ? "Global / Asia" : "Malaysia",
       prompt: isCurrentlyIndividual
-        ? "Compare constituency voter sentiment, campaign rally reach, infrastructure development promises, and public trust across all 5 political candidates in Ramanagara."
+        ? "Clean solo intelligence, bilateral diplomacy, citizen welfare and statesmanship audit for Xi Jinping."
         : "Benchmark mobile banking satisfaction, digital security trust, and 5-way competitor market share of voice.",
     });
   };
@@ -750,20 +752,30 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveProjectId(newProjectId);
 
     // Update primary entity & tenant title
+    const firstNode = dataset.ipscanNodes[0];
+    const isInd = activeType === "individual";
     const updatedPrimaryEntity: Entity = {
       id: `ent-${Date.now()}`,
       tenantId: activeTenant.id,
       name: dataset.brandName,
-      type: activeType === "individual" ? "individual" : "company",
-      websiteUrl: `https://${dataset.brandName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.my`,
+      type: isInd ? "individual" : "company",
+      websiteUrl: isInd
+        ? `https://${dataset.brandName.toLowerCase().replace(/[^a-z0-9]/g, "")}.org`
+        : `https://${dataset.brandName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.my`,
       socialUrls: {},
       industry: dataset.industry,
-      country: params.region || "Malaysia",
-      state: "Wilayah Persekutuan",
-      city: "Kuala Lumpur",
-      aliases: [dataset.brandName, `${dataset.brandName} MY`, `${dataset.brandName} Asia`],
-      hashtags: [`#${dataset.brandName.replace(/\s+/g, "")}`, "#Malaysia", "#ASEAN"],
-      keywords: [dataset.brandName, "interview", "leadership", "policy", "industry"],
+      country: firstNode?.country || params.region || (isInd ? "Global / Asia" : "Malaysia"),
+      state: firstNode?.region || (isInd ? "Beijing" : "Wilayah Persekutuan"),
+      city: firstNode?.city || (isInd ? "Beijing" : "Kuala Lumpur"),
+      aliases: isInd
+        ? [dataset.brandName, "Leader", "State President"]
+        : [dataset.brandName, `${dataset.brandName} MY`, `${dataset.brandName} Regional`],
+      hashtags: isInd
+        ? [`#${dataset.brandName.replace(/\s+/g, "")}`, "#GlobalDiplomacy", "#Leadership"]
+        : [`#${dataset.brandName.replace(/\s+/g, "")}`, "#Business", "#ASEAN"],
+      keywords: isInd
+        ? [dataset.brandName, "diplomacy", "governance", "modernization", "welfare"]
+        : [dataset.brandName, "customer experience", "reliability", "pricing"],
       exclusions: [],
       isPrimary: true,
     };

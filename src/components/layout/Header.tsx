@@ -83,23 +83,23 @@ export const Header: React.FC = () => {
 
   // Individuals list (Slots 1 to 5) - Supports 1 individual (solo) up to 5 individuals
   const [individuals, setIndividuals] = useState<string[]>(() => {
-    if (!primaryEntity?.name) return ["Nikhil Kumaraswamy", "C.P. Yogeshwara", "D.K. Suresh", "H.D. Kumaraswamy", "A. Manjunath"];
+    if (!primaryEntity?.name) return ["Xi Jinping", "", "", "", ""];
     const rivals = competitors.filter((c) => !c.isPrimary).map((c) => c.name);
     return [primaryEntity.name, ...rivals, "", "", "", ""].slice(0, 5);
   });
 
   const [commaInput, setCommaInput] = useState(() => {
-    if (!primaryEntity?.name) return "Nikhil Kumaraswamy, C.P. Yogeshwara, D.K. Suresh, H.D. Kumaraswamy, A. Manjunath";
+    if (!primaryEntity?.name) return "Xi Jinping";
     const rivals = competitors.filter((c) => !c.isPrimary).map((c) => c.name);
     return [primaryEntity.name, ...rivals].join(", ");
   });
 
   // Modal Form Details
   const [promptInput, setPromptInput] = useState("");
-  const [industryInput, setIndustryInput] = useState("Constituency Leadership & Representation");
-  const [locationInput, setLocationInput] = useState("Ramanagara, Karnataka, India");
-  const [regionInput, setRegionInput] = useState("India");
-  const [sourcesInput, setSourcesInput] = useState("https://x.com/nikhilkumaraswamy, https://facebook.com/nikhilkumaraswamy, https://karnatakatoday.in");
+  const [industryInput, setIndustryInput] = useState(() => primaryEntity?.industry || "Global Governance & Diplomacy");
+  const [locationInput, setLocationInput] = useState(() => (primaryEntity?.city ? `${primaryEntity.city}, ${primaryEntity.country}` : "Beijing, China"));
+  const [regionInput, setRegionInput] = useState(() => primaryEntity?.country || "Global / Asia");
+  const [sourcesInput, setSourcesInput] = useState("https://x.com/diplomatic_wire, https://reuters.com, https://bloomberg.com");
   const [selectedChannels, setSelectedChannels] = useState<string[]>([
     "x",
     "news",
@@ -138,28 +138,20 @@ export const Header: React.FC = () => {
 
   const individualPresets = [
     {
-      label: "👤 Solo: Nikhil Kumaraswamy",
-      names: ["Nikhil Kumaraswamy"],
-      industry: "Constituency Leadership & Youth Representation",
-      location: "Ramanagara, Karnataka, India",
-      region: "India",
-      prompt: "Audit ground public sentiment, youth support, constituency development work, and silk weaver subsidies for Nikhil Kumaraswamy.",
+      label: "👤 Solo: Xi Jinping",
+      names: ["Xi Jinping"],
+      industry: "Global Governance & Diplomacy",
+      location: "Beijing, China",
+      region: "Global / Asia",
+      prompt: "Audit international diplomatic standing, bilateral trade relations, citizen welfare benchmarks, and modernization delivery for Xi Jinping.",
     },
     {
-      label: "👤 Solo: C.P. Yogeshwara",
-      names: ["C.P. Yogeshwara"],
-      industry: "Senior Regional Governance",
-      location: "Channapatna, Karnataka, India",
-      region: "India",
-      prompt: "Track public perception on Channapatna tank filling projects, legislative experience, and local voter support for C.P. Yogeshwara.",
-    },
-    {
-      label: "👤 Solo: D.K. Shivakumar",
-      names: ["D.K. Shivakumar"],
-      industry: "State Governance & Deputy Chief Minister",
-      location: "Kanakapura, Karnataka, India",
-      region: "India",
-      prompt: "Audit voter perception on Brand Bangalore initiatives, Mekedatu project, water security, and party organization leadership.",
+      label: "🌐 5 World Leaders",
+      names: ["Xi Jinping", "Joe Biden", "Narendra Modi", "Emmanuel Macron", "Anwar Ibrahim"],
+      industry: "Multilateral Global Diplomacy",
+      location: "Beijing & Washington, Global",
+      region: "Global",
+      prompt: "Comprehensive 5-way global leadership benchmark tracking diplomatic stature, international mindshare, economic modernization, and governance credibility.",
     },
     {
       label: "👤 Solo: Elon Musk",
@@ -170,20 +162,20 @@ export const Header: React.FC = () => {
       prompt: "Track global executive mindshare, developer reception, product vision credibility, and controversy risk metrics for Elon Musk.",
     },
     {
-      label: "⚔️ 2 Rivals: Nikhil vs Yogeshwara",
-      names: ["Nikhil Kumaraswamy", "C.P. Yogeshwara"],
-      industry: "Electoral Head-to-Head Benchmarking",
-      location: "Channapatna & Ramanagara, Karnataka",
-      region: "India",
-      prompt: "Direct 2-way head-to-head comparison between Nikhil Kumaraswamy and C.P. Yogeshwara on local standing, ground popularity, and public support.",
+      label: "⚡ 5 Global Tech CEOs",
+      names: ["Elon Musk", "Sundar Pichai", "Satya Nadella", "Jensen Huang", "Sam Altman"],
+      industry: "Global Tech Titans",
+      location: "San Francisco & Austin, United States",
+      region: "Global",
+      prompt: "Benchmark executive quote frequency, AI breakthrough perception, developer community sentiment, and leadership trust across 5 Big Tech CEOs.",
     },
     {
-      label: "🏛️ 3 Leaders: Nikhil vs Yogeshwara vs D.K. Suresh",
-      names: ["Nikhil Kumaraswamy", "C.P. Yogeshwara", "D.K. Suresh"],
-      industry: "Tri-Corner Regional Representation",
-      location: "Ramanagara District, Karnataka",
+      label: "👤 Solo: Nikhil Kumaraswamy",
+      names: ["Nikhil Kumaraswamy"],
+      industry: "Constituency Leadership & Youth Representation",
+      location: "Ramanagara, Karnataka, India",
       region: "India",
-      prompt: "3-way comparison evaluating public support, grassroots reach, and constituency development delivery across all 3 key candidates.",
+      prompt: "Audit ground public sentiment, youth support, constituency development work, and silk weaver subsidies for Nikhil Kumaraswamy.",
     },
     {
       label: "🗳️ 5 Candidates: Ramanagara Battle",
@@ -192,14 +184,6 @@ export const Header: React.FC = () => {
       location: "Ramanagara & Channapatna, Karnataka",
       region: "India",
       prompt: "Comprehensive 5-way candidate benchmark tracking Local Standing, Support to Public, Popularity, Public Status, and Constituency Delivery.",
-    },
-    {
-      label: "⚡ 5 Global Tech CEOs",
-      names: ["Elon Musk", "Sundar Pichai", "Satya Nadella", "Jensen Huang", "Sam Altman"],
-      industry: "Global Tech Titans",
-      location: "San Francisco & Austin, United States",
-      region: "Global",
-      prompt: "Benchmark executive quote frequency, AI breakthrough perception, developer community sentiment, and leadership trust across 5 Big Tech CEOs.",
     },
   ];
 
@@ -258,14 +242,14 @@ export const Header: React.FC = () => {
 
     await replenishTenantData({
       brandName: primaryName,
-      industry: industryInput || (modalMode === "individual" ? "Constituency Leadership & Representation" : "Corporate Banking"),
+      industry: industryInput || (modalMode === "individual" ? "Global Governance & Diplomacy" : "Corporate Banking"),
       isSingleEntity: isSingle,
       competitorNames: isSingle ? [] : rivals,
       prompt: promptInput || (isSingle
         ? `Clean solo telemetry, 5-pillar standing and sentiment audit for ${primaryName}`
         : `Comparative benchmark across all ${activeList.length} entities: ${activeList.join(", ")}`),
-      location: locationInput || (modalMode === "individual" ? "Ramanagara, Karnataka, India" : "Kuala Lumpur, Malaysia"),
-      region: regionInput || (modalMode === "individual" ? "India" : "Malaysia"),
+      location: locationInput || (modalMode === "individual" ? "Beijing, China" : "Kuala Lumpur, Malaysia"),
+      region: regionInput || (modalMode === "individual" ? "Global / Asia" : "Malaysia"),
       sourceChannels: selectedChannels,
       customSourceUrls: sourcesInput.split(",").map((s) => s.trim()).filter(Boolean),
       entityType: modalMode,

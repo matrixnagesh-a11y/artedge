@@ -24,10 +24,15 @@ import {
   OnboardingMethodology,
   TenantSaaSConfig,
   PastProject,
+  AutoSelfServiceRule,
+  PermissionDefinition,
+  AccessAuditLog,
+  TenantMfaPolicy,
 } from "@/types";
 import {
   MOCK_TENANTS,
   MOCK_USER,
+  MOCK_USERS,
   MOCK_ENTITIES,
   MOCK_COMPETITORS_FIVE_WAY,
   MOCK_MENTIONS,
@@ -40,6 +45,10 @@ import {
   MOCK_CONNECTORS,
   MOCK_SUBSCRIPTION_PLANS,
   MOCK_TENANT_SAAS_CONFIGS,
+  MOCK_AUTO_SELF_SERVICE_RULES,
+  MOCK_PERMISSIONS,
+  MOCK_ACCESS_AUDIT_LOGS,
+  MOCK_TENANT_MFA_POLICY,
 } from "@/data/mockData";
 import { generateReplenishedDataset, ReplenishParams } from "@/lib/dataGenerator";
 
@@ -98,9 +107,12 @@ interface TenantContextType {
   // Comparison Setup Modals
   isPromptModalOpen: boolean;
   setIsPromptModalOpen: (open: boolean) => void;
+  promptModalScope: "single" | "multi";
+  setPromptModalScope: (scope: "single" | "multi") => void;
   isPastProjectsModalOpen: boolean;
   setIsPastProjectsModalOpen: (open: boolean) => void;
-  startNewComparisonPrompt: (mode?: "company" | "individual") => void;
+  startNewComparisonPrompt: (mode?: "company" | "individual", scope?: "single" | "multi") => void;
+  refreshCurrentData: (saveSnapshot?: boolean) => Promise<void>;
 
   // SaaS & White-Label Management
   subscriptionPlans: SubscriptionPlan[];
@@ -120,6 +132,51 @@ interface TenantContextType {
   updateLeadStatus: (leadId: string, status: LeadItem["status"]) => void;
   approveHoldingStatement: (statementText: string) => void;
   addEntity: (newEntity: Partial<Entity>) => void;
+
+  // Access Control, Auto Self-Service & Optional MFA
+  users: UserProfile[];
+  setUsers: React.Dispatch<React.SetStateAction<UserProfile[]>>;
+  autoSelfServiceRules: AutoSelfServiceRule[];
+  mfaPolicy: TenantMfaPolicy;
+  permissions: PermissionDefinition[];
+  auditLogs: AccessAuditLog[];
+  selfServiceRegister: (data: {
+    name: string;
+    email: string;
+    department: string;
+    jobTitle: string;
+    requestedRole?: UserRole;
+    enableOptionalMfa?: boolean;
+    mfaMethod?: "totp" | "sms" | "passkey" | "recovery";
+    tenantId?: string;
+  }) => { success: boolean; requiresApproval: boolean; message: string; user?: UserProfile };
+  approveSelfServiceUser: (userId: string) => void;
+  rejectSelfServiceUser: (userId: string) => void;
+  updateUserRole: (userId: string, newRole: UserRole) => void;
+  toggleUserStatus: (userId: string) => void;
+  updateUserMfaPreference: (
+    userId: string,
+    enabled: boolean,
+    method?: "totp" | "sms" | "passkey" | "recovery",
+    optionalPref?: "disabled" | "optional_prompt" | "always_required"
+  ) => void;
+  addAutoDomainRule: (rule: Omit<AutoSelfServiceRule, "id" | "createdAt">) => void;
+  toggleAutoDomainRule: (ruleId: string) => void;
+  deleteAutoDomainRule: (ruleId: string) => void;
+  updateTenantMfaPolicy: (policy: Partial<TenantMfaPolicy>) => void;
+  hasPermission: (permissionId: string) => boolean;
+  switchActiveUser: (userId: string) => void;
+
+  // 14-Day Free Version & 2-Day Paid Reminder
+  trialStartedAt: string;
+  trialExpiresAt: string;
+  lastPaidPromptAt: string;
+  trialDaysRemaining: number;
+  trialDaysElapsed: number;
+  isPaidUpgradeModalOpen: boolean;
+  setIsPaidUpgradeModalOpen: (open: boolean) => void;
+  dismissPaidPrompt: () => void;
+  startOrRefreshFreeTrial: (email?: string) => void;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
@@ -173,8 +230,16 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [compliance] = useState<ComplianceRecord>(MOCK_COMPLIANCE);
   const [connectors] = useState<ConnectorHealth[]>(MOCK_CONNECTORS);
 
+  // Access Control, Auto Self-Service & Optional MFA
+  const [users, setUsers] = useState<UserProfile[]>(MOCK_USERS);
+  const [autoSelfServiceRules, setAutoSelfServiceRules] = useState<AutoSelfServiceRule[]>(MOCK_AUTO_SELF_SERVICE_RULES);
+  const [mfaPolicy, setMfaPolicy] = useState<TenantMfaPolicy>(MOCK_TENANT_MFA_POLICY);
+  const [permissions] = useState<PermissionDefinition[]>(MOCK_PERMISSIONS);
+  const [auditLogs, setAuditLogs] = useState<AccessAuditLog[]>(MOCK_ACCESS_AUDIT_LOGS);
+
   // Global Setup Modals
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+  const [promptModalScope, setPromptModalScope] = useState<"single" | "multi">("single");
   const [isPastProjectsModalOpen, setIsPastProjectsModalOpen] = useState(false);
 
   // Date Range and Entity Mode State
@@ -253,6 +318,77 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const primaryEntity = entities.find((e) => e.isPrimary) || entities[0];
+
+  // 14-Day Free Version & 2-Day Paid Reminder State
+  const defaultTrialStart = new Date(Date.now() - 2 * 86400000).toISOString(); // Defaults to Day 2
+  const [trialStartedAt, setTrialStartedAt] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("artedge_trial_started_at") || defaultTrialStart;
+    }
+    return defaultTrialStart;
+  });
+
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("artedge_trial_expires_at");
+      if (stored) return stored;
+    }
+    const started = typeof window !== "undefined" ? (localStorage.getItem("artedge_trial_started_at") || defaultTrialStart) : defaultTrialStart;
+    return new Date(new Date(started).getTime() + 14 * 86400000).toISOString();
+  });
+
+  const [lastPaidPromptAt, setLastPaidPromptAt] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("artedge_last_paid_prompt_at") || defaultTrialStart;
+    }
+    return defaultTrialStart;
+  });
+
+  const [isPaidUpgradeModalOpen, setIsPaidUpgradeModalOpen] = useState<boolean>(false);
+
+  // Calculate elapsed days & remaining days
+  const nowMs = Date.now();
+  const startMs = new Date(trialStartedAt).getTime();
+  const expiryMs = new Date(trialExpiresAt).getTime();
+  const trialDaysElapsed = Math.min(14, Math.max(1, Math.floor((nowMs - startMs) / 86400000) + 1));
+  const trialDaysRemaining = Math.max(0, Math.ceil((expiryMs - nowMs) / 86400000));
+
+  // Check if 2 days (48h) have passed since last prompt
+  React.useEffect(() => {
+    const lastPromptMs = new Date(lastPaidPromptAt).getTime();
+    const diffHours = (Date.now() - lastPromptMs) / (1000 * 60 * 60);
+    // If 48+ hours have elapsed (every 2 days) and still on free trial, trigger modal
+    if (diffHours >= 48) {
+      const timer = setTimeout(() => {
+        setIsPaidUpgradeModalOpen(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [lastPaidPromptAt]);
+
+  const dismissPaidPrompt = () => {
+    const newPromptTime = new Date().toISOString();
+    setLastPaidPromptAt(newPromptTime);
+    setIsPaidUpgradeModalOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("artedge_last_paid_prompt_at", newPromptTime);
+    }
+  };
+
+  const startOrRefreshFreeTrial = (email?: string) => {
+    const newStart = new Date().toISOString();
+    const newExpiry = new Date(Date.now() + 14 * 86400000).toISOString();
+    setTrialStartedAt(newStart);
+    setTrialExpiresAt(newExpiry);
+    setLastPaidPromptAt(newStart);
+    setIsPaidUpgradeModalOpen(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("artedge_trial_started_at", newStart);
+      localStorage.setItem("artedge_trial_expires_at", newExpiry);
+      localStorage.setItem("artedge_last_paid_prompt_at", newStart);
+      if (email) localStorage.setItem("artedge_current_user_email", email);
+    }
+  };
 
   const setUserRole = (role: UserRole) => {
     setUser((prev) => ({ ...prev, role }));
@@ -669,6 +805,24 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearLastReplenishSummary = () => setLastReplenishSummary(null);
 
+  const refreshCurrentData = async (saveSnapshot: boolean = true) => {
+    const isSingle = competitors.length <= 1;
+    const compNames = competitors.filter((c) => !c.isPrimary).map((c) => c.name);
+    await replenishTenantData({
+      brandName: primaryEntity.name,
+      entityType: entityType,
+      isSingleEntity: isSingle,
+      competitorNames: isSingle ? [] : compNames,
+      industry: primaryEntity.industry,
+      region: primaryEntity.country,
+      location: primaryEntity.city,
+      saveCurrentProject: saveSnapshot,
+      prompt: isSingle
+        ? `Refreshed real-time telemetry, sentiment audit and 5-pillar standing profile for ${primaryEntity.name}`
+        : `Refreshed real-time comparative benchmark for ${primaryEntity.name} against ${compNames.join(", ")}`,
+    });
+  };
+
   const addEntity = (newEntity: Partial<Entity>) => {
     const created: Entity = {
       id: `ent-${Date.now()}`,
@@ -688,6 +842,312 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isPrimary: false,
     };
     setEntities((prev) => [...prev, created]);
+  };
+
+  // Access Control, Auto Self-Service & Optional MFA Functions
+  const selfServiceRegister = (data: {
+    name: string;
+    email: string;
+    department: string;
+    jobTitle: string;
+    requestedRole?: UserRole;
+    enableOptionalMfa?: boolean;
+    mfaMethod?: "totp" | "sms" | "passkey" | "recovery";
+    tenantId?: string;
+  }) => {
+    const emailDomain = data.email.includes("@") ? data.email.split("@")[1].toLowerCase() : "";
+    const matchedRule = autoSelfServiceRules.find(
+      (r) => r.status === "active" && emailDomain === r.domain.toLowerCase().replace(/^@/, "")
+    );
+
+    const targetTenantId = data.tenantId || matchedRule?.tenantId || activeTenant.id;
+    const assignedRole = matchedRule ? matchedRule.defaultRole : (data.requestedRole || "analyst");
+    const autoApprove = matchedRule ? matchedRule.autoApprove : false;
+    const initialStatus: "active" | "pending_approval" = autoApprove ? "active" : "pending_approval";
+
+    const newUser: UserProfile = {
+      id: `usr-${Date.now()}`,
+      tenantId: targetTenantId,
+      name: data.name,
+      email: data.email,
+      role: assignedRole,
+      avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`,
+      department: data.department || "General",
+      jobTitle: data.jobTitle || "Team Member",
+      phone: "+60 12-000 0000",
+      status: initialStatus,
+      provisioningType: matchedRule ? "auto_domain_self_service" : "manual_invite",
+      mfaEnabled: !!data.enableOptionalMfa,
+      mfaMethod: data.mfaMethod || "totp",
+      mfaOptionalPreference: data.enableOptionalMfa ? "optional_prompt" : "disabled",
+      createdAt: new Date().toISOString(),
+      lastLoginAt: autoApprove ? new Date().toISOString() : undefined,
+    };
+
+    setUsers((prev) => [newUser, ...prev]);
+
+    const newLog: AccessAuditLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      userId: newUser.id,
+      userName: newUser.name,
+      userEmail: newUser.email,
+      action: "self_service_register",
+      details: matchedRule
+        ? `Self-service auto-registered via domain rule '${matchedRule.domain}' (Role: ${assignedRole}, Status: ${initialStatus}, MFA: ${newUser.mfaEnabled ? "Optional " + newUser.mfaMethod : "Disabled"}).`
+        : `Self-service registration submitted without auto-approval rule. Status queued as pending_approval for admin review.`,
+      ipAddress: "175.143.19.22",
+      location: "Kuala Lumpur, Malaysia",
+      severity: autoApprove ? "info" : "warning",
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+
+    return {
+      success: true,
+      requiresApproval: !autoApprove,
+      message: autoApprove
+        ? `Account verified and active! Welcome to ArtEDGE (${assignedRole.replace("_", " ")}).`
+        : `Registration received! Your corporate account has been queued for Client Admin approval.`,
+      user: newUser,
+    };
+  };
+
+  const approveSelfServiceUser = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const updated = { ...u, status: "active" as const };
+          setAuditLogs((l) => [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: u.id,
+              userName: u.name,
+              userEmail: u.email,
+              action: "self_service_approved",
+              details: `Self-service user registration approved by administrator (${user.name}). Full access granted.`,
+              ipAddress: "175.143.22.84",
+              location: "Kuala Lumpur, Malaysia",
+              severity: "info",
+            },
+            ...l,
+          ]);
+          return updated;
+        }
+        return u;
+      })
+    );
+  };
+
+  const rejectSelfServiceUser = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const updated = { ...u, status: "suspended" as const };
+          setAuditLogs((l) => [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: u.id,
+              userName: u.name,
+              userEmail: u.email,
+              action: "self_service_rejected",
+              details: `Self-service user registration rejected / suspended by administrator (${user.name}).`,
+              ipAddress: "175.143.22.84",
+              location: "Kuala Lumpur, Malaysia",
+              severity: "warning",
+            },
+            ...l,
+          ]);
+          return updated;
+        }
+        return u;
+      })
+    );
+  };
+
+  const updateUserRole = (userId: string, newRole: UserRole) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const oldRole = u.role;
+          setAuditLogs((l) => [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: u.id,
+              userName: u.name,
+              userEmail: u.email,
+              action: "role_changed",
+              details: `RBAC role updated from '${oldRole}' to '${newRole}' by administrator (${user.name}).`,
+              ipAddress: "175.143.22.84",
+              location: "Kuala Lumpur, Malaysia",
+              severity: "security",
+            },
+            ...l,
+          ]);
+          return { ...u, role: newRole };
+        }
+        return u;
+      })
+    );
+    if (user.id === userId) {
+      setUser((prev) => ({ ...prev, role: newRole }));
+    }
+  };
+
+  const toggleUserStatus = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const newStatus = u.status === "active" ? ("suspended" as const) : ("active" as const);
+          setAuditLogs((l) => [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: u.id,
+              userName: u.name,
+              userEmail: u.email,
+              action: "status_changed",
+              details: `User status changed to '${newStatus}' by administrator (${user.name}).`,
+              ipAddress: "175.143.22.84",
+              location: "Kuala Lumpur, Malaysia",
+              severity: newStatus === "suspended" ? "warning" : "info",
+            },
+            ...l,
+          ]);
+          return { ...u, status: newStatus };
+        }
+        return u;
+      })
+    );
+  };
+
+  const updateUserMfaPreference = (
+    userId: string,
+    enabled: boolean,
+    method: "totp" | "sms" | "passkey" | "recovery" = "totp",
+    optionalPref: "disabled" | "optional_prompt" | "always_required" = enabled ? "optional_prompt" : "disabled"
+  ) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === userId) {
+          const updated = {
+            ...u,
+            mfaEnabled: enabled,
+            mfaMethod: method,
+            mfaOptionalPreference: optionalPref,
+          };
+          setAuditLogs((l) => [
+            {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              userId: u.id,
+              userName: u.name,
+              userEmail: u.email,
+              action: "mfa_toggled",
+              details: `User MFA configuration updated: enabled=${enabled}, method=${method}, policy=${optionalPref}.`,
+              ipAddress: "175.143.22.84",
+              location: "Kuala Lumpur, Malaysia",
+              severity: "security",
+            },
+            ...l,
+          ]);
+          return updated;
+        }
+        return u;
+      })
+    );
+    if (user.id === userId) {
+      setUser((prev) => ({
+        ...prev,
+        mfaEnabled: enabled,
+        mfaMethod: method,
+        mfaOptionalPreference: optionalPref,
+      }));
+    }
+  };
+
+  const addAutoDomainRule = (rule: Omit<AutoSelfServiceRule, "id" | "createdAt">) => {
+    const newRule: AutoSelfServiceRule = {
+      ...rule,
+      id: `rule-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setAutoSelfServiceRules((prev) => [newRule, ...prev]);
+    setAuditLogs((l) => [
+      {
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        userName: user.name,
+        userEmail: user.email,
+        action: "policy_updated",
+        details: `Added new auto self-service corporate domain rule '${newRule.domain}' (Default Role: ${newRule.defaultRole}, Auto-approve: ${newRule.autoApprove}).`,
+        ipAddress: "175.143.22.84",
+        location: "Kuala Lumpur, Malaysia",
+        severity: "info",
+      },
+      ...l,
+    ]);
+  };
+
+  const toggleAutoDomainRule = (ruleId: string) => {
+    setAutoSelfServiceRules((prev) =>
+      prev.map((r) => (r.id === ruleId ? { ...r, status: r.status === "active" ? "paused" : "active" } : r))
+    );
+  };
+
+  const deleteAutoDomainRule = (ruleId: string) => {
+    setAutoSelfServiceRules((prev) => prev.filter((r) => r.id !== ruleId));
+  };
+
+  const updateTenantMfaPolicy = (policy: Partial<TenantMfaPolicy>) => {
+    setMfaPolicy((prev) => {
+      const updated = { ...prev, ...policy };
+      setAuditLogs((l) => [
+        {
+          id: `log-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          userName: user.name,
+          userEmail: user.email,
+          action: "policy_updated",
+          details: `Workspace MFA Policy updated to enforcement='${updated.enforcementLevel}', rememberDeviceDays=${updated.rememberDeviceDays}.`,
+          ipAddress: "175.143.22.84",
+          location: "Kuala Lumpur, Malaysia",
+          severity: "security",
+        },
+        ...l,
+      ]);
+      return updated;
+    });
+  };
+
+  const hasPermission = (permissionId: string): boolean => {
+    const perm = permissions.find((p) => p.id === permissionId);
+    if (!perm) return true;
+    return perm.defaultRoles.includes(user.role);
+  };
+
+  const switchActiveUser = (userId: string) => {
+    const found = users.find((u) => u.id === userId);
+    if (found) {
+      setUser(found);
+      setAuditLogs((l) => [
+        {
+          id: `log-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          userId: found.id,
+          userName: found.name,
+          userEmail: found.email,
+          action: "login_success",
+          details: `Switched active workspace user session to ${found.name} (${found.role}).`,
+          ipAddress: "175.143.22.84",
+          location: "Kuala Lumpur, Malaysia",
+          severity: "info",
+        },
+        ...l,
+      ]);
+    }
   };
 
   return (
@@ -733,14 +1193,20 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deletePastProject,
         isPromptModalOpen,
         setIsPromptModalOpen,
+        promptModalScope,
+        setPromptModalScope,
         isPastProjectsModalOpen,
         setIsPastProjectsModalOpen,
-        startNewComparisonPrompt: (mode?: "company" | "individual") => {
+        startNewComparisonPrompt: (mode?: "company" | "individual", scope?: "single" | "multi") => {
           if (mode) {
             setEntityTypeState(mode);
           }
+          if (scope) {
+            setPromptModalScope(scope);
+          }
           setIsPromptModalOpen(true);
         },
+        refreshCurrentData,
         subscriptionPlans,
         tenantSaaSConfigs,
         currentTenantSaaSConfig,
@@ -756,6 +1222,33 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateLeadStatus,
         approveHoldingStatement,
         addEntity,
+        users,
+        setUsers,
+        autoSelfServiceRules,
+        mfaPolicy,
+        permissions,
+        auditLogs,
+        selfServiceRegister,
+        approveSelfServiceUser,
+        rejectSelfServiceUser,
+        updateUserRole,
+        toggleUserStatus,
+        updateUserMfaPreference,
+        addAutoDomainRule,
+        toggleAutoDomainRule,
+        deleteAutoDomainRule,
+        updateTenantMfaPolicy,
+        hasPermission,
+        switchActiveUser,
+        trialStartedAt,
+        trialExpiresAt,
+        lastPaidPromptAt,
+        trialDaysRemaining,
+        trialDaysElapsed,
+        isPaidUpgradeModalOpen,
+        setIsPaidUpgradeModalOpen,
+        dismissPaidPrompt,
+        startOrRefreshFreeTrial,
       }}
     >
       {children}

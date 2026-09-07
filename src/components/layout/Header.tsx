@@ -36,11 +36,14 @@ import {
   Terminal,
   Loader2,
   MapPin,
+  UserCheck,
+  Swords,
 } from "lucide-react";
 
 export const Header: React.FC = () => {
   const {
     primaryEntity,
+    competitors,
     crisis,
     user,
     dateRange,
@@ -48,6 +51,7 @@ export const Header: React.FC = () => {
     entityType,
     setEntityType,
     replenishTenantData,
+    refreshCurrentData,
     isReplenishing,
     replenishPhase,
     replenishProgress,
@@ -61,25 +65,38 @@ export const Header: React.FC = () => {
     clearWorkspaceData,
     isPromptModalOpen,
     setIsPromptModalOpen,
+    promptModalScope,
+    setPromptModalScope,
     isPastProjectsModalOpen,
     setIsPastProjectsModalOpen,
     pastProjects,
     activeProjectId,
     restorePastProject,
     deletePastProject,
+    trialDaysRemaining,
+    trialDaysElapsed,
+    setIsPaidUpgradeModalOpen,
   } = useTenant();
 
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [modalMode, setModalMode] = useState<"company" | "individual">(entityType || "company");
+  const [modalMode, setModalMode] = useState<"company" | "individual">(entityType || "individual");
 
-  // Save Confirmation Dialog State (ask_save -> reconfirm_delete)
-  const [confirmSaveModal, setConfirmSaveModal] = useState<"none" | "ask_save" | "reconfirm_delete">("none");
+  // Individuals list (Slots 1 to 5) - Supports 1 individual (solo) up to 5 individuals
+  const [individuals, setIndividuals] = useState<string[]>(() => {
+    if (!primaryEntity?.name) return ["Nikhil Kumaraswamy", "C.P. Yogeshwara", "D.K. Suresh", "H.D. Kumaraswamy", "A. Manjunath"];
+    const rivals = competitors.filter((c) => !c.isPrimary).map((c) => c.name);
+    return [primaryEntity.name, ...rivals, "", "", "", ""].slice(0, 5);
+  });
 
-  // Modal Form State
+  const [commaInput, setCommaInput] = useState(() => {
+    if (!primaryEntity?.name) return "Nikhil Kumaraswamy, C.P. Yogeshwara, D.K. Suresh, H.D. Kumaraswamy, A. Manjunath";
+    const rivals = competitors.filter((c) => !c.isPrimary).map((c) => c.name);
+    return [primaryEntity.name, ...rivals].join(", ");
+  });
+
+  // Modal Form Details
   const [promptInput, setPromptInput] = useState("");
-  const [brandInput, setBrandInput] = useState(primaryEntity?.name || "Nikhil Kumaraswamy");
-  const [industryInput, setIndustryInput] = useState("Electoral Benchmarking & Constituency");
-  const [competitorsInput, setCompetitorsInput] = useState("C.P. Yogeshwara, D.K. Suresh, H.D. Kumaraswamy, A. Manjunath");
+  const [industryInput, setIndustryInput] = useState("Constituency Leadership & Representation");
   const [locationInput, setLocationInput] = useState("Ramanagara, Karnataka, India");
   const [regionInput, setRegionInput] = useState("India");
   const [sourcesInput, setSourcesInput] = useState("https://x.com/nikhilkumaraswamy, https://facebook.com/nikhilkumaraswamy, https://karnatakatoday.in");
@@ -99,140 +116,165 @@ export const Header: React.FC = () => {
     }
   };
 
+  const updateIndividualSlot = (index: number, value: string) => {
+    setIndividuals((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      setCommaInput(next.filter(Boolean).join(", "));
+      return next;
+    });
+  };
+
+  const handleCommaInputChange = (value: string) => {
+    setCommaInput(value);
+    const parsed = value.split(",").map((s) => s.trim());
+    setIndividuals([parsed[0] || "", parsed[1] || "", parsed[2] || "", parsed[3] || "", parsed[4] || ""]);
+  };
+
+  const clearAllIndividuals = () => {
+    setIndividuals(["", "", "", "", ""]);
+    setCommaInput("");
+  };
+
+  const individualPresets = [
+    {
+      label: "👤 Solo: Nikhil Kumaraswamy",
+      names: ["Nikhil Kumaraswamy"],
+      industry: "Constituency Leadership & Youth Representation",
+      location: "Ramanagara, Karnataka, India",
+      region: "India",
+      prompt: "Audit ground public sentiment, youth support, constituency development work, and silk weaver subsidies for Nikhil Kumaraswamy.",
+    },
+    {
+      label: "👤 Solo: C.P. Yogeshwara",
+      names: ["C.P. Yogeshwara"],
+      industry: "Senior Regional Governance",
+      location: "Channapatna, Karnataka, India",
+      region: "India",
+      prompt: "Track public perception on Channapatna tank filling projects, legislative experience, and local voter support for C.P. Yogeshwara.",
+    },
+    {
+      label: "👤 Solo: D.K. Shivakumar",
+      names: ["D.K. Shivakumar"],
+      industry: "State Governance & Deputy Chief Minister",
+      location: "Kanakapura, Karnataka, India",
+      region: "India",
+      prompt: "Audit voter perception on Brand Bangalore initiatives, Mekedatu project, water security, and party organization leadership.",
+    },
+    {
+      label: "👤 Solo: Elon Musk",
+      names: ["Elon Musk"],
+      industry: "Technology & Autonomous AI",
+      location: "Austin, Texas, United States",
+      region: "Global",
+      prompt: "Track global executive mindshare, developer reception, product vision credibility, and controversy risk metrics for Elon Musk.",
+    },
+    {
+      label: "⚔️ 2 Rivals: Nikhil vs Yogeshwara",
+      names: ["Nikhil Kumaraswamy", "C.P. Yogeshwara"],
+      industry: "Electoral Head-to-Head Benchmarking",
+      location: "Channapatna & Ramanagara, Karnataka",
+      region: "India",
+      prompt: "Direct 2-way head-to-head comparison between Nikhil Kumaraswamy and C.P. Yogeshwara on local standing, ground popularity, and public support.",
+    },
+    {
+      label: "🏛️ 3 Leaders: Nikhil vs Yogeshwara vs D.K. Suresh",
+      names: ["Nikhil Kumaraswamy", "C.P. Yogeshwara", "D.K. Suresh"],
+      industry: "Tri-Corner Regional Representation",
+      location: "Ramanagara District, Karnataka",
+      region: "India",
+      prompt: "3-way comparison evaluating public support, grassroots reach, and constituency development delivery across all 3 key candidates.",
+    },
+    {
+      label: "🗳️ 5 Candidates: Ramanagara Battle",
+      names: ["Nikhil Kumaraswamy", "C.P. Yogeshwara", "D.K. Suresh", "H.D. Kumaraswamy", "A. Manjunath"],
+      industry: "Full 5-Way Constituency Arena",
+      location: "Ramanagara & Channapatna, Karnataka",
+      region: "India",
+      prompt: "Comprehensive 5-way candidate benchmark tracking Local Standing, Support to Public, Popularity, Public Status, and Constituency Delivery.",
+    },
+    {
+      label: "⚡ 5 Global Tech CEOs",
+      names: ["Elon Musk", "Sundar Pichai", "Satya Nadella", "Jensen Huang", "Sam Altman"],
+      industry: "Global Tech Titans",
+      location: "San Francisco & Austin, United States",
+      region: "Global",
+      prompt: "Benchmark executive quote frequency, AI breakthrough perception, developer community sentiment, and leadership trust across 5 Big Tech CEOs.",
+    },
+  ];
+
   const companyPresets = [
     {
-      label: "🏦 5 Malaysian Banks",
-      brand: "Maybank",
-      industry: "Banking & Fintech",
-      competitors: "CIMB, Public Bank, RHB, Hong Leong Bank",
+      label: "🏢 Solo: Maybank",
+      names: ["Maybank"],
+      industry: "Banking & Financial Services",
       location: "Kuala Lumpur, Malaysia",
       region: "Malaysia",
-      sources: "https://maybank2u.com.my, https://x.com/mymaybank, https://thestar.com.my",
+      prompt: "Deep-dive brand sentiment, MAE mobile banking uptime, customer support satisfaction, and retail banking reputation.",
+    },
+    {
+      label: "🏢 Solo: Tesla Malaysia",
+      names: ["Tesla Malaysia"],
+      industry: "Automotive EV & Energy",
+      location: "Cyberjaya, Selangor, Malaysia",
+      region: "Malaysia",
+      prompt: "Monitor Supercharger network reliability, vehicle delivery feedback, build quality, and customer brand loyalty.",
+    },
+    {
+      label: "🏦 5 Malaysian Banks",
+      names: ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank"],
+      industry: "Banking & Fintech",
+      location: "Kuala Lumpur, Malaysia",
+      region: "Malaysia",
       prompt: "Compare public customer sentiment regarding mobile app reliability, transaction fees, interest rates, and SME loan approvals across all 5 banking giants.",
     },
     {
       label: "⚡ 5 EV Automotive Brands",
-      brand: "Tesla Malaysia",
+      names: ["Tesla Malaysia", "BYD Auto", "Proton e.MAS", "Smart Malaysia", "Hyundai Ioniq"],
       industry: "Automotive & EV",
-      competitors: "BYD Auto, Proton e.MAS, Smart Malaysia, Hyundai Ioniq",
       location: "Cyberjaya & Selangor, Malaysia",
       region: "Malaysia",
-      sources: "https://tesla.com/en_my, https://x.com/teslamalaysia, https://paultan.org",
       prompt: "Benchmark public sentiment and owner reviews on charging network, delivery waiting time, build quality, and resale confidence across 5 EV brands.",
     },
-    {
-      label: "✈️ 5 Commercial Airlines",
-      brand: "AirAsia",
-      industry: "Aviation & Travel",
-      competitors: "Malaysia Airlines, Singapore Airlines, Batik Air, Scoot Aviation",
-      location: "KLIA Sepang & ASEAN",
-      region: "Malaysia",
-      sources: "https://airasia.com, https://x.com/airasia, https://facebook.com/airasia",
-      prompt: "Analyze passenger discussions on flight delays, refund portal speed, baggage handling, airfares, and customer service satisfaction across 5 airlines.",
-    },
-    {
-      label: "📱 5 Telecom Operators",
-      brand: "Maxis",
-      industry: "Telecommunications & 5G",
-      competitors: "CelcomDigi, U Mobile, Unifi Mobile, Yoodo",
-      location: "Kuala Lumpur & National, Malaysia",
-      region: "Malaysia",
-      sources: "https://maxis.com.my, https://x.com/maxis, https://lowyat.net",
-      prompt: "Track 5G coverage perception, data package value, network latency complaints, and customer service responsiveness across 5 telcos.",
-    },
-    {
-      label: "🛍️ 5 E-Commerce Platforms",
-      brand: "Shopee Malaysia",
-      industry: "E-Commerce & Retail",
-      competitors: "Lazada ASEAN, TikTok Shop MY, Zalora, PG Mall",
-      location: "Kuala Lumpur & Regional ASEAN",
-      region: "Malaysia",
-      sources: "https://shopee.com.my, https://x.com/shopeemy, https://facebook.com/ShopeeMY",
-      prompt: "Benchmark seller fees, shipping speed, return/refund dispute resolution, and campaign voucher discounts across 5 shopping platforms.",
-    },
   ];
 
-  const individualPresets = [
-    {
-      label: "🗳️ 5 Political Contestants (Ramanagara)",
-      brand: "Nikhil Kumaraswamy",
-      industry: "Electoral Benchmarking & Constituency",
-      competitors: "C.P. Yogeshwara, D.K. Suresh, H.D. Kumaraswamy, A. Manjunath",
-      location: "Ramanagara, Karnataka, India",
-      region: "India",
-      sources: "https://x.com/nikhilkumaraswamy, https://facebook.com/nikhilkumaraswamy, https://karnatakatoday.in",
-      prompt: "Compare constituency voter sentiment, campaign rally reach, infrastructure development promises, and public trust across all 5 political candidates.",
-    },
-    {
-      label: "✈️ 5 Malaysian Public Figures",
-      brand: "Tan Sri Tony Fernandes",
-      industry: "Executive Leadership & Public Affairs",
-      competitors: "Khairy Jamaluddin, Syed Saddiq, Rafizi Ramli, Anthony Loke",
-      location: "Kuala Lumpur, Malaysia",
-      region: "Malaysia",
-      sources: "https://x.com/tonyfernandes, https://linkedin.com/in/tonyfernandes, https://capitala.com",
-      prompt: "Compare public trust, quote virality, policy discussion sentiment, and media admiration metrics across 5 prominent figures.",
-    },
-    {
-      label: "⚡ 5 Global Tech CEOs",
-      brand: "Elon Musk",
-      industry: "Global Tech Titans",
-      competitors: "Sundar Pichai, Satya Nadella, Jensen Huang, Sam Altman",
-      location: "San Francisco & Austin, United States",
-      region: "Global",
-      sources: "https://x.com/elonmusk, https://x.com/sundarpichai, https://x.com/sama",
-      prompt: "Benchmark executive quote frequency, AI breakthrough perception, developer community sentiment, and leadership trust across 5 Big Tech CEOs.",
-    },
-    {
-      label: "🏛️ 5 Governance & Policy Leaders",
-      brand: "Dato' Seri Anwar Ibrahim",
-      industry: "National Governance & Economy",
-      competitors: "Anthony Loke, Rafizi Ramli, Tengku Zafrul, Ahmad Zahid",
-      location: "Putrajaya, Malaysia",
-      region: "Malaysia",
-      sources: "https://x.com/anwaribrahim, https://facebook.com/anwaribrahimofficial",
-      prompt: "Monitor economic reform approval sentiment, foreign direct investment speeches, and regional diplomacy reach across 5 ministers.",
-    },
-  ];
-
-  const handleApplyPreset = (preset: typeof companyPresets[0]) => {
-    setBrandInput(preset.brand);
+  const handleApplyPreset = (preset: typeof individualPresets[0] | typeof companyPresets[0]) => {
+    const padded = [preset.names[0] || "", preset.names[1] || "", preset.names[2] || "", preset.names[3] || "", preset.names[4] || ""];
+    setIndividuals(padded);
+    setCommaInput(preset.names.join(", "));
     setIndustryInput(preset.industry);
-    setCompetitorsInput(preset.competitors);
     setLocationInput(preset.location);
     setRegionInput(preset.region);
-    setSourcesInput(preset.sources);
     setPromptInput(preset.prompt);
   };
 
-  // Step 1 Trigger: Initiates replenishment and checks if we need to ask to save
-  const handleInitiateReplenishment = () => {
-    if (!brandInput.trim()) return;
-
-    if (primaryEntity?.name && primaryEntity.name !== brandInput.trim()) {
-      setConfirmSaveModal("ask_save");
-    } else {
-      executeReplenishment(true);
-    }
-  };
-
-  const executeReplenishment = async (saveData: boolean) => {
-    setConfirmSaveModal("none");
+  const executeReplenishment = async () => {
     setIsPromptModalOpen(false);
 
+    const activeList = individuals.map((s) => s.trim()).filter(Boolean);
+    const primaryName = activeList[0] || (modalMode === "individual" ? "Nikhil Kumaraswamy" : "Maybank");
+    const rivals = activeList.slice(1);
+    const isSingle = rivals.length === 0;
+
     await replenishTenantData({
-      brandName: brandInput.trim(),
-      industry: industryInput,
-      competitorNames: competitorsInput.split(",").map((s) => s.trim()).filter(Boolean),
-      prompt: promptInput,
-      location: locationInput,
-      region: regionInput,
+      brandName: primaryName,
+      industry: industryInput || (modalMode === "individual" ? "Constituency Leadership & Representation" : "Corporate Banking"),
+      isSingleEntity: isSingle,
+      competitorNames: isSingle ? [] : rivals,
+      prompt: promptInput || (isSingle
+        ? `Clean solo telemetry, 5-pillar standing and sentiment audit for ${primaryName}`
+        : `Comparative benchmark across all ${activeList.length} entities: ${activeList.join(", ")}`),
+      location: locationInput || (modalMode === "individual" ? "Ramanagara, Karnataka, India" : "Kuala Lumpur, Malaysia"),
+      region: regionInput || (modalMode === "individual" ? "India" : "Malaysia"),
       sourceChannels: selectedChannels,
       customSourceUrls: sourcesInput.split(",").map((s) => s.trim()).filter(Boolean),
       entityType: modalMode,
-      saveCurrentProject: saveData,
+      saveCurrentProject: true, // Automatically auto-archives previous snapshot to Past Projects
     });
   };
+
+  const activeIndividuals = individuals.map((s) => s.trim()).filter(Boolean);
+  const isSoloMode = activeIndividuals.length <= 1;
 
   return (
     <>
@@ -245,7 +287,7 @@ export const Header: React.FC = () => {
               setIsPromptModalOpen(true);
             }}
             className="flex items-center gap-2 bg-primary-light hover:bg-primary/20 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-900 border border-primary/30 transition-all cursor-pointer shadow-2xs"
-            title="Click to replenish data or switch brand prompt"
+            title="Click to view or switch active target"
           >
             {entityType === "individual" ? (
               <User className="w-4 h-4 text-primary" />
@@ -256,8 +298,29 @@ export const Header: React.FC = () => {
             <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">
               ({entityType === "individual" ? "Individual" : "Company"})
             </span>
-            <RefreshCw className="w-3 h-3 text-primary animate-spin-slow opacity-80" />
           </button>
+
+          {/* Direct Live Refresh Data Button */}
+          <button
+            onClick={() => refreshCurrentData()}
+            disabled={isReplenishing}
+            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 border border-slate-200 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Live re-scan & refresh current data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-primary ${isReplenishing ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          {/* Scope Status Badge */}
+          {isSoloMode ? (
+            <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[11px] font-bold">
+              <UserCheck className="w-3 h-3" /> Solo Profile
+            </span>
+          ) : (
+            <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-[11px] font-bold">
+              <Swords className="w-3 h-3" /> {activeIndividuals.length}-Way Comparison
+            </span>
+          )}
 
           {/* Company vs Individual Segmented Control */}
           <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold border border-slate-200/80">
@@ -287,7 +350,7 @@ export const Header: React.FC = () => {
             </button>
           </div>
 
-          {/* AI Prompt Bar Trigger */}
+          {/* Search bar with quick prompt trigger */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -297,56 +360,35 @@ export const Header: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQuery.trim()) {
-                  setPromptInput(searchQuery);
-                  setBrandInput(searchQuery.split(" ")[0]);
+                  const names = searchQuery.split(",").map((s) => s.trim());
+                  setIndividuals([names[0] || "", names[1] || "", names[2] || "", names[3] || "", names[4] || ""]);
+                  setCommaInput(searchQuery);
                   setModalMode(entityType);
                   setIsPromptModalOpen(true);
                 }
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-24 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all"
+              className="w-full bg-slate-100 border border-slate-200 rounded-2xl pl-9 pr-24 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all"
             />
             <button
               onClick={() => {
                 if (searchQuery.trim()) {
-                  setPromptInput(searchQuery);
-                  setBrandInput(searchQuery.split(" ")[0]);
+                  const names = searchQuery.split(",").map((s) => s.trim());
+                  setIndividuals([names[0] || "", names[1] || "", names[2] || "", names[3] || "", names[4] || ""]);
+                  setCommaInput(searchQuery);
                 }
                 setModalMode(entityType);
                 setIsPromptModalOpen(true);
               }}
-              className="absolute right-1.5 top-1 px-2.5 py-1 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs hover:opacity-95 transition-all"
+              className="absolute right-1.5 top-1 px-2.5 py-1 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs hover:opacity-95 transition-all cursor-pointer"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Replenish</span>
+              <span>Scan</span>
             </button>
           </div>
         </div>
 
-        {/* Date Range Selector, Clean Data Switch & Past Projects */}
+        {/* Header Actions: Past Projects & New Comparison */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Clean Data Switch Toggle */}
-          <div className="flex items-center gap-2 bg-slate-100/90 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-              <span>🧹 Clean Data:</span>
-              <span className={cleanDataMode ? "text-green font-black" : "text-slate-400"}>
-                {cleanDataMode ? "ON" : "OFF"}
-              </span>
-            </span>
-            <button
-              onClick={() => setCleanDataMode(!cleanDataMode)}
-              className={`w-8 h-4 rounded-full transition-colors relative p-0.5 ${
-                cleanDataMode ? "bg-green" : "bg-slate-300"
-              }`}
-              title="When enabled, each prompt runs on a clean slate and archives prior prompt data to Past Projects"
-            >
-              <div
-                className={`w-3 h-3 rounded-full bg-white transition-transform ${
-                  cleanDataMode ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
-
           {/* Past Projects Archive Button */}
           <button
             onClick={() => setIsPastProjectsModalOpen(true)}
@@ -354,24 +396,24 @@ export const Header: React.FC = () => {
             title="View and restore archived past prompt projects"
           >
             <FolderArchive className="w-3.5 h-3.5 text-primary" />
-            <span>Past Projects ({pastProjects.length})</span>
+            <span className="hidden md:inline">Past Projects</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+              {pastProjects.length}
+            </span>
           </button>
 
-          {/* + New Clean Comparison Button */}
+          {/* DEDICATED NEW COMPARISON BUTTON */}
           <button
             onClick={() => {
-              clearWorkspaceData();
-              setBrandInput("");
-              setPromptInput("");
-              setCompetitorsInput("");
+              clearAllIndividuals();
               setModalMode(entityType);
               setIsPromptModalOpen(true);
             }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-light text-teal-dark hover:bg-teal hover:text-white text-xs font-bold border border-teal/30 transition-all shadow-2xs cursor-pointer"
-            title="Wipe workspace and start fresh comparison prompt"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-black shadow-sm shadow-primary/20 transition-all cursor-pointer"
+            title="Clear old data and run a fresh comparison (1 to 5 individuals or brands)"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ New Comparison</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>New Comparison</span>
           </button>
 
           {/* Quick AI Replenish Data Pill */}
@@ -421,6 +463,45 @@ export const Header: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Export</span>
+          </Link>
+
+          {/* 14-Day Free Version Badge / Upgrade Trigger */}
+          <button
+            onClick={() => setIsPaidUpgradeModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-gold/15 to-primary/10 border border-gold/40 hover:border-gold text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            title="14-Day Free Trial Evaluation. Click to register for Paid Version."
+          >
+            <Clock className="w-3.5 h-3.5 text-gold-dark shrink-0" />
+            <span className="text-[11px] font-extrabold text-slate-900">
+              Day {trialDaysElapsed}/14 Free
+            </span>
+            <span className="hidden md:inline text-[10px] text-primary font-bold underline ml-0.5">
+              Upgrade
+            </span>
+          </button>
+
+          {/* User Profile & Access Control Pill */}
+          <Link
+            href="/access-control"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/90 transition-all text-xs shadow-2xs cursor-pointer"
+            title={`Active User: ${user.name} (${user.role}). Click to manage Access Control, Self-Service & Optional MFA.`}
+          >
+            <img
+              src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
+              alt={user.name}
+              className="w-5 h-5 rounded-full object-cover border border-slate-300 shrink-0"
+            />
+            <div className="hidden xl:flex flex-col text-left">
+              <span className="font-extrabold text-[11px] text-slate-900 leading-tight">{user.name}</span>
+              <span className="text-[9px] text-slate-500 font-semibold leading-none">{user.role.replace("_", " ")}</span>
+            </div>
+            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase ${
+              user.mfaEnabled
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-slate-100 text-slate-500"
+            }`}>
+              {user.mfaEnabled ? `2FA ${user.mfaMethod || "TOTP"}` : "2FA Opt"}
+            </span>
           </Link>
         </div>
       </header>
@@ -593,28 +674,33 @@ export const Header: React.FC = () => {
         </div>
       )}
 
-      {/* AI PROMPT & DATA REPLENISH MODAL */}
+      {/* NEW COMPARISON MODAL (1 TO 5 ENTITIES, AUTOMATIC CLEAN DATA) */}
       {isPromptModalOpen && !isReplenishing && (
         <div className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-hidden">
           <div className="bg-card border border-slate-200 rounded-3xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Sticky Header */}
             <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-violet text-white flex items-center justify-center shrink-0 shadow-md">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-                    Start New 5-Entity Benchmark Comparison
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                      New Comparison
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                      Auto-Clean Data
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-500">
-                    Compare 5 new companies or 5 new individuals. Location & data sources are customizable.
+                    Wipes old telemetry and runs fresh listening for 1 to 5 {modalMode === "individual" ? "individuals" : "companies"}.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsPromptModalOpen(false)}
-                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center cursor-pointer shrink-0 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -622,137 +708,225 @@ export const Header: React.FC = () => {
 
             {/* Scrollable Modal Content */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              {/* Entity Mode Tabs: Individual vs Company */}
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalMode("individual");
+                    handleApplyPreset(individualPresets[0]);
+                  }}
+                  className={`flex-1 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    modalMode === "individual"
+                      ? "bg-white text-primary shadow-xs border border-primary/20"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  <span>👤 Individual Leaders & Figures</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalMode("company");
+                    handleApplyPreset(companyPresets[0]);
+                  }}
+                  className={`flex-1 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    modalMode === "company"
+                      ? "bg-white text-primary shadow-xs border border-primary/20"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <Building className="w-4 h-4" />
+                  <span>🏢 Corporate Companies & Brands</span>
+                </button>
+              </div>
 
-            {/* Mode Tabs: 5 Companies vs 5 Individuals */}
-            <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setModalMode("company");
-                  handleApplyPreset(companyPresets[0]);
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  modalMode === "company"
-                    ? "bg-white text-primary shadow-xs"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <Building className="w-4 h-4" />
-                <span>🏢 5 Companies Comparison</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModalMode("individual");
-                  handleApplyPreset(individualPresets[0]);
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  modalMode === "individual"
-                    ? "bg-white text-primary shadow-xs"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <User className="w-4 h-4" />
-                <span>👤 5 Individuals Comparison</span>
-              </button>
-            </div>
+              {/* Real-Time Detection Banner (Solo vs Comparison) */}
+              {isSoloMode ? (
+                <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-emerald-900 block">
+                      1 Individual Detected: Solo Mode (No Comparison)
+                    </span>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      ArtEDGE will clear previous data completely and fetch 100% of telemetry, 5-pillar standing, credibility, and mentions exclusively for <strong>{activeIndividuals[0] || "this figure"}</strong>. No comparison contenders will be created.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-purple-50/90 border border-purple-200 rounded-2xl flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Swords className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-purple-900 block">
+                      {activeIndividuals.length}-Way Comparison Arena Active
+                    </span>
+                    <p className="text-[11px] text-purple-700 mt-0.5">
+                      ArtEDGE will clear previous data and benchmark <strong>{activeIndividuals[0]}</strong> against {activeIndividuals.slice(1).join(", ")} across Share of Voice, Grassroots Standing, and Multilingual Sentiment.
+                    </p>
+                  </div>
+                </div>
+              )}
 
-            {/* Quick 1-Click Presets */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                ⚡ Quick 1-Click 5-Entity Presets ({modalMode === "company" ? "5 Companies" : "5 Individuals"})
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(modalMode === "company" ? companyPresets : individualPresets).map((preset, idx) => (
+              {/* 1 to 5 Individuals Form Slots */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>Enter {modalMode === "individual" ? "Individuals" : "Companies"} (1 to 5 targets)</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      • Enter 1 for Solo, or 2 to 5 to Compare
+                    </span>
+                  </label>
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => handleApplyPreset(preset)}
-                    className={`text-left p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                      brandInput === preset.brand
-                        ? "bg-primary text-white border-primary shadow-xs"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-primary-light hover:border-primary/40"
-                    }`}
+                    onClick={clearAllIndividuals}
+                    className="text-[11px] font-bold text-slate-400 hover:text-coral transition-colors cursor-pointer"
                   >
-                    <div className="font-bold">{preset.label}</div>
-                    <div className={`text-[10px] truncate ${brandInput === preset.brand ? "text-white/80" : "text-slate-500"}`}>
-                      {preset.brand}, {preset.competitors}
-                    </div>
+                    Clear All
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom 5-Entity Inputs Form */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    1. Primary Entity Name ({modalMode === "company" ? "Target Company" : "Target Individual"})
-                  </label>
-                  <input
-                    type="text"
-                    value={brandInput}
-                    onChange={(e) => setBrandInput(e.target.value)}
-                    placeholder="e.g. Maybank / Tesla / Tony Fernandes / D.K. Suresh"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
-                  />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Industry / Sector / Election Category
-                  </label>
+                {/* Comma-separated Quick Input */}
+                <div className="relative">
                   <input
                     type="text"
-                    value={industryInput}
-                    onChange={(e) => setIndustryInput(e.target.value)}
-                    placeholder="e.g. Banking & Fintech, Automotive EV, Politics"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
+                    value={commaInput}
+                    onChange={(e) => handleCommaInputChange(e.target.value)}
+                    placeholder="e.g. Nikhil Kumaraswamy, C.P. Yogeshwara, D.K. Suresh..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
                   />
+                  <span className="text-[10px] text-slate-400 block mt-1">
+                    Tip: Type comma-separated names above, or fill the slots below individually.
+                  </span>
+                </div>
+
+                {/* Slots 1 to 5 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {[0, 1, 2, 3, 4].map((idx) => {
+                    const isPrimary = idx === 0;
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-xl border flex items-center gap-2 transition-all ${
+                          isPrimary
+                            ? "bg-primary-light/20 border-primary/40 col-span-1 sm:col-span-2"
+                            : individuals[idx]
+                            ? "bg-slate-50 border-slate-300"
+                            : "bg-slate-50/50 border-dashed border-slate-200"
+                        }`}
+                      >
+                        <span
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                            isPrimary
+                              ? "bg-primary text-white"
+                              : individuals[idx]
+                              ? "bg-slate-800 text-white"
+                              : "bg-slate-200 text-slate-500"
+                          }`}
+                        >
+                          #{idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={individuals[idx] || ""}
+                            onChange={(e) => updateIndividualSlot(idx, e.target.value)}
+                            placeholder={
+                              isPrimary
+                                ? `Target #1 (${modalMode === "individual" ? "Primary Leader - Required" : "Primary Brand - Required"})`
+                                : `Target #${idx + 1} (Optional contender)`
+                            }
+                            className="w-full bg-transparent text-xs text-slate-900 font-bold placeholder:text-slate-400 focus:outline-none"
+                          />
+                        </div>
+                        {individuals[idx] && !isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => updateIndividualSlot(idx, "")}
+                            className="text-slate-400 hover:text-coral p-1 cursor-pointer"
+                            title="Remove target"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* Quick 1-Click Presets */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  2 to 5. The Other 4 Comparison Entities (Comma-Separated)
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  ⚡ Quick Presets (Solo & Comparative)
                 </label>
-                <input
-                  type="text"
-                  value={competitorsInput}
-                  onChange={(e) => setCompetitorsInput(e.target.value)}
-                  placeholder="e.g. C.P. Yogeshwara, D.K. Suresh, H.D. Kumaraswamy, A. Manjunath"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Total of 5 entities will be benchmarked: {brandInput || "Primary Target"} + 4 peers.
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(modalMode === "individual" ? individualPresets : companyPresets).map((preset, idx) => {
+                    const isSelected =
+                      activeIndividuals.length === preset.names.length &&
+                      activeIndividuals.every((name, i) => name.toLowerCase() === preset.names[i]?.toLowerCase());
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleApplyPreset(preset)}
+                        className={`text-left p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-primary text-white border-primary shadow-xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-primary-light hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-bold">{preset.label}</div>
+                        <div className={`text-[10px] truncate ${isSelected ? "text-white/80" : "text-slate-500"}`}>
+                          {preset.names.join(" vs ") || "Solo Profile"}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* LOCATION & GEOGRAPHIC SCOPE SECTION */}
+              {/* Industry & Geographic Scope Details */}
               <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-teal" />
                   <span className="text-xs font-bold text-slate-900">
-                    📍 Target Location & Geographic Scope
+                    📍 Industry & Geographic Scope
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-1">
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      City / Constituency / District / State
+                      Industry / Focus
+                    </label>
+                    <input
+                      type="text"
+                      value={industryInput}
+                      onChange={(e) => setIndustryInput(e.target.value)}
+                      placeholder="e.g. Governance, Tech"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-teal/30"
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                      City / Constituency
                     </label>
                     <input
                       type="text"
                       value={locationInput}
                       onChange={(e) => setLocationInput(e.target.value)}
-                      placeholder="e.g. Ramanagara, Karnataka / Kuala Lumpur"
+                      placeholder="e.g. Ramanagara, Karnataka"
                       className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-teal/30"
                     />
                   </div>
-                  <div>
+                  <div className="sm:col-span-1">
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                      Country / National Territory
+                      Country
                     </label>
                     <select
                       value={regionInput}
@@ -769,112 +943,26 @@ export const Header: React.FC = () => {
                 </div>
               </div>
 
-              {/* SOURCES FOR THE PERSON / MONITORED DATA STREAMS */}
-              <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-bold text-slate-900">
-                      📡 Monitored Data Sources & Profile URLs for {brandInput || "the Person"}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {selectedChannels.length} Channels Active
-                  </span>
-                </div>
-
-                {/* Source Channel Toggles */}
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: "x", label: "🐦 X (Twitter) Feeds" },
-                    { id: "news", label: "📰 Regional News & Press Wires" },
-                    { id: "facebook", label: "📸 Meta (Facebook & Instagram)" },
-                    { id: "youtube", label: "📺 YouTube Speeches & Transcripts" },
-                    { id: "forums", label: "💬 Local Community Forums & Web" },
-                  ].map((ch) => {
-                    const isChecked = selectedChannels.includes(ch.id);
-                    return (
-                      <button
-                        key={ch.id}
-                        type="button"
-                        onClick={() => toggleChannel(ch.id)}
-                        className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                          isChecked
-                            ? "bg-primary text-white shadow-2xs"
-                            : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        <span>{isChecked ? "✓" : "+"}</span>
-                        <span>{ch.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Specific URLs and Handles input */}
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                    Specific Source URLs, Handles, or Portals for the Person (Comma-Separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={sourcesInput}
-                    onChange={(e) => setSourcesInput(e.target.value)}
-                    placeholder="e.g. https://x.com/nikhilkumaraswamy, https://facebook.com/nikhilkumaraswamy, https://karnatakatoday.in"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Crawlers and IPSCAN telemetry will prioritize posts and sentiment directly from these sources.
-                  </p>
-                </div>
-              </div>
-
+              {/* Strategic Objective or Prompt */}
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Comparison Prompt / Strategic Objective
+                  Comparison Prompt / Objective (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={promptInput}
                   onChange={(e) => setPromptInput(e.target.value)}
-                  placeholder="e.g. Compare public voter sentiment, ground rally turnout, public trust index, and manifesto development promises across all 5 candidates."
+                  placeholder={
+                    isSoloMode
+                      ? `Audit voter perception, youth support, constituency development work, and silk weaver subsidies for ${activeIndividuals[0] || "this figure"}...`
+                      : `Compare public voter sentiment, ground rally reach, public trust index, and promises across all ${activeIndividuals.length} candidates...`
+                  }
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white resize-none"
                 />
               </div>
             </div>
 
-            {/* Clean Data Switch on Prompt Generation */}
-            <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-light flex items-center justify-center text-teal font-bold text-xs">
-                  🧹
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-900 block">
-                    Clean Workspace for New Comparison
-                  </span>
-                  <p className="text-[11px] text-slate-500">
-                    Wipes previous data from memory and prompts to archive or delete as per your selection.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCleanDataMode(!cleanDataMode)}
-                className={`w-10 h-5 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                  cleanDataMode ? "bg-green" : "bg-slate-300"
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                    cleanDataMode ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          {/* Sticky Modal Footer Actions */}
+            {/* Sticky Modal Footer Actions */}
             <div className="p-4 sm:p-5 bg-slate-50/90 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
               <div className="flex items-center gap-3">
                 <button
@@ -897,137 +985,19 @@ export const Header: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => executeReplenishment(false)}
-                  disabled={!brandInput.trim()}
-                  title="Wipe previous data and start fresh comparison immediately without saving snapshot"
-                  className="px-3.5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Wipe & Start Fresh</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleInitiateReplenishment}
-                  disabled={!brandInput.trim()}
-                  className="px-5 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-extrabold rounded-xl shadow-md shadow-primary/25 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Save & Start Comparison</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 1: ASK TO SAVE EXISTING PROJECT DIALOG */}
-      {confirmSaveModal === "ask_save" && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-teal-light text-teal-dark flex items-center justify-center shrink-0 shadow-xs">
-                <Save className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">
-                  Save Existing Project Data?
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Active Workspace Snapshot Check
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-600 space-y-2">
-              <p>
-                You have active comparison data for <strong className="text-slate-900">{primaryEntity?.name}</strong> ({entityType === "individual" ? "Individual" : "Company"}).
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Would you like to save this project snapshot into your <strong>Past Projects Archive</strong> before launching the new prompt for <strong className="text-primary">{brandInput}</strong>?
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
+              {/* Direct Execution Button - Wipes Old Data Clean Without Confirmation Dialogs */}
               <button
-                onClick={() => executeReplenishment(true)}
-                className="w-full py-2.5 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                type="button"
+                onClick={executeReplenishment}
+                disabled={activeIndividuals.length === 0}
+                className="px-6 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-black rounded-xl shadow-md shadow-primary/25 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
               >
-                <Save className="w-4 h-4" />
-                <span>Yes, Save to Past Projects & Continue</span>
-              </button>
-
-              <button
-                onClick={() => setConfirmSaveModal("reconfirm_delete")}
-                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <X className="w-4 h-4 text-slate-500" />
-                <span>No, Don't Save (Discard)</span>
-              </button>
-
-              <button
-                onClick={() => setConfirmSaveModal("none")}
-                className="w-full py-2 text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
-              >
-                Cancel & Return
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 2: RECONFIRM PERMANENT DATA DELETION / DISCARD DIALOG */}
-      {confirmSaveModal === "reconfirm_delete" && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-card border-2 border-coral/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-coral-light text-coral flex items-center justify-center shrink-0 shadow-xs animate-bounce">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-coral">
-                  Confirm Permanent Data Deletion
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Irreversible Action Warning
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-coral-light/20 rounded-2xl border border-coral/30 text-xs text-slate-700 space-y-2">
-              <p className="font-bold text-coral-dark">
-                Are you sure you want to permanently discard the current project data for {primaryEntity?.name}?
-              </p>
-              <p className="text-[11px] text-slate-600">
-                If you proceed without saving, all current mentions, competitor benchmarks, sentiment graphs, and leads for <strong>{primaryEntity?.name}</strong> will be permanently deleted and cannot be recovered.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <button
-                onClick={() => executeReplenishment(false)}
-                className="w-full py-2.5 px-4 bg-coral hover:bg-coral-dark text-white rounded-xl text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Yes, Permanently Delete & Start New Comparison</span>
-              </button>
-
-              <button
-                onClick={() => executeReplenishment(true)}
-                className="w-full py-2.5 px-4 bg-teal-light text-teal-dark hover:bg-teal hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>Wait, Save Project First</span>
-              </button>
-
-              <button
-                onClick={() => setConfirmSaveModal("none")}
-                className="w-full py-2 text-center text-xs font-semibold text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
-              >
-                Abort & Keep Current Project
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>
+                  {isSoloMode
+                    ? `Clear Old Data & Scan Solo ${modalMode === "individual" ? "Individual" : "Company"}`
+                    : `Clear Old Data & Compare ${activeIndividuals.length} ${modalMode === "individual" ? "Individuals" : "Companies"}`}
+                </span>
               </button>
             </div>
           </div>

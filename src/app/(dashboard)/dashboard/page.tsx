@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTenant } from "@/context/TenantContext";
 import { formatNumber, formatPercent } from "@/lib/utils";
@@ -25,6 +25,7 @@ import {
   Globe,
   Building,
   User,
+  RotateCw,
 } from "lucide-react";
 import {
   AreaChart,
@@ -40,6 +41,7 @@ import {
 } from "recharts";
 
 export default function DashboardPage() {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const {
     primaryEntity,
     competitors,
@@ -51,6 +53,8 @@ export default function DashboardPage() {
     setDateRange,
     entityType,
     startNewComparisonPrompt,
+    refreshCurrentData,
+    isReplenishing,
   } = useTenant();
 
   // Dynamically generated time series based on selected date range (Today, 7D, 30D, Quarter, Year)
@@ -67,7 +71,7 @@ export default function DashboardPage() {
   }[dateRange] || "Rolling 7-Day Window";
 
   return (
-    <div className="space-y-8 pb-16">
+    <div id="executive-command-container" className="space-y-8 pb-16">
       {/* Top Welcome & Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-primary/90 text-white p-6 rounded-3xl shadow-ios">
         <div>
@@ -101,24 +105,32 @@ export default function DashboardPage() {
             {primaryEntity.name} Intelligence Command
           </h1>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
-            Real-time multi-channel listening across 5-way {entityType === "individual" ? "peer executives" : "regional competitors"}, Malaysian sentiment analytics, IPSCAN network routing, and explainable credibility risk scores.
+            Real-time multi-channel listening across {competitors.length <= 1 ? "solo individual profile telemetry" : `5-way ${entityType === "individual" ? "peer executives" : "regional competitors"}`}, Malaysian sentiment analytics, IPSCAN network routing, and explainable credibility risk scores.
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() =>
-              generateTrafficLightSentimentPdf(
-                primaryEntity,
-                mentions,
-                competitors,
-                ipscanFilter.isGlobalWorldwide ? "Global / Worldwide" : (ipscanFilter.query || "Filtered Area")
-              )
-            }
-            className="flex items-center gap-1.5 bg-white text-slate-900 text-xs font-bold px-3.5 py-2 rounded-2xl shadow-md hover:bg-slate-100 transition-all"
+            onClick={async () => {
+              setIsGeneratingPdf(true);
+              try {
+                await generateTrafficLightSentimentPdf(
+                  primaryEntity,
+                  mentions,
+                  competitors,
+                  ipscanFilter.isGlobalWorldwide ? "Global / Worldwide" : (ipscanFilter.query || "Filtered Area")
+                );
+              } catch (err) {
+                console.error("Traffic Light PDF generation error:", err);
+              } finally {
+                setIsGeneratingPdf(false);
+              }
+            }}
+            disabled={isGeneratingPdf}
+            className="flex items-center gap-1.5 bg-white text-slate-900 text-xs font-bold px-3.5 py-2 rounded-2xl shadow-md hover:bg-slate-100 transition-all disabled:opacity-60 cursor-pointer"
           >
             <FileText className="w-4 h-4 text-green" />
-            <span>Traffic Light PDF</span>
+            <span>{isGeneratingPdf ? "Capturing Screenshot & PDF..." : "Traffic Light PDF + Screen"}</span>
           </button>
           <button
             onClick={() =>
@@ -149,16 +161,18 @@ export default function DashboardPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary text-white">
-                Active 5-Entity Benchmark
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${competitors.length <= 1 ? "bg-emerald-600 text-white" : "bg-primary text-white"}`}>
+                {competitors.length <= 1 ? "👤 Solo Profile Active (1 Entity)" : `Active ${competitors.length}-Entity Benchmark`}
               </span>
               <span className="text-xs font-bold text-slate-500">
-                {entityType === "individual" ? "👤 5 Individuals Compared" : "🏢 5 Companies Compared"}
+                {competitors.length <= 1
+                  ? (entityType === "individual" ? "Single Figure Analysis" : "Single Brand Focus")
+                  : (entityType === "individual" ? `👤 ${competitors.length} Individuals Compared` : `🏢 ${competitors.length} Companies Compared`)}
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap pt-1">
               <span className="px-3 py-1.5 rounded-xl bg-primary-light text-primary text-xs font-extrabold flex items-center gap-1.5 border border-primary/20 shadow-xs">
-                <span>★</span> {primaryEntity.name} (Primary)
+                <span>★</span> {primaryEntity.name} {competitors.length <= 1 ? "(Solo Target)" : "(Primary)"}
               </span>
               {competitors
                 .filter((c) => !c.isPrimary)
@@ -177,18 +191,27 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
-              onClick={() => startNewComparisonPrompt(entityType)}
+              onClick={() => refreshCurrentData(false)}
+              disabled={isReplenishing}
+              className="px-3.5 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-2xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all disabled:opacity-50"
+              title="Refresh and recalculate live metrics for current target"
+            >
+              <RotateCw className={`w-3.5 h-3.5 text-primary ${isReplenishing ? "animate-spin" : ""}`} />
+              <span>{isReplenishing ? "Refreshing..." : "Refresh Data"}</span>
+            </button>
+            <button
+              onClick={() => startNewComparisonPrompt(entityType, competitors.length <= 1 ? "multi" : "single")}
               className="px-4 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-black rounded-2xl shadow-md shadow-primary/20 flex items-center gap-2 cursor-pointer transition-all"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Compare Any 5 New {entityType === "individual" ? "People" : "Companies"}</span>
+              <span>{competitors.length <= 1 ? "Compare with Others (2-5)" : `Compare New ${entityType === "individual" ? "People" : "Companies"}`}</span>
             </button>
             <Link
               href="/competitors"
               className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl flex items-center gap-1.5 transition-all"
             >
               <Swords className="w-4 h-4 text-primary" />
-              <span>5-Way Arena</span>
+              <span>{competitors.length <= 1 ? "Solo Profile / Arena" : `${competitors.length}-Way Arena`}</span>
             </Link>
           </div>
         </div>
@@ -229,14 +252,16 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900">
-              {competitors[0]?.metrics.shareOfVoicePercent || 36.8}%
+              {competitors[0]?.metrics.shareOfVoicePercent || (competitors.length <= 1 ? 100 : 36.8)}%
             </span>
             <span className="px-2 py-0.5 text-[10px] font-bold bg-violet-light text-violet rounded-full">
-              Rank #1 of {competitors.length}
+              {competitors.length <= 1 ? "Solo Target (100%)" : `Rank #1 of ${competitors.length}`}
             </span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            Outperforming {competitors[1]?.name || "Competitor"} ({competitors[1]?.metrics.shareOfVoicePercent || 24.5}%)
+            {competitors.length <= 1
+              ? "100% total profile ownership (no active contenders)"
+              : `Outperforming ${competitors[1]?.name || "Competitor"} (${competitors[1]?.metrics.shareOfVoicePercent || 24.5}%)`}
           </p>
         </div>
 
@@ -380,14 +405,14 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">
-                  5-Way Share of Voice
+                  {competitors.length <= 1 ? "Share of Voice Ownership" : `${competitors.length}-Way Share of Voice`}
                 </h2>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
-                  {entityType === "individual" ? "Leaders" : "Brands"}
+                  {competitors.length <= 1 ? "Solo Profile" : (entityType === "individual" ? "Leaders" : "Brands")}
                 </span>
               </div>
               <Link href="/competitors" className="text-xs font-bold text-primary hover:underline">
-                Arena ↗
+                {competitors.length <= 1 ? "Profile ↗" : "Arena ↗"}
               </Link>
             </div>
 
@@ -417,9 +442,9 @@ export default function DashboardPage() {
 
           <Link
             href="/competitors"
-            className="w-full text-center py-2.5 mt-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all"
+            className="w-full text-center py-2.5 mt-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all block"
           >
-            Open 5-Way Arena Analysis
+            {competitors.length <= 1 ? "Open Solo Profile / Add Rivals" : `Open ${competitors.length}-Way Arena Analysis`}
           </Link>
         </div>
       </div>

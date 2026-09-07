@@ -32,16 +32,36 @@ import {
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { activeTenant, setActiveTenant, tenants, user, setUserRole, currentTenantSaaSConfig } = useTenant();
+  const {
+    activeTenant,
+    setActiveTenant,
+    tenants,
+    user,
+    setUserRole,
+    currentTenantSaaSConfig,
+    startNewComparisonPrompt,
+    competitors,
+    entityType,
+  } = useTenant();
+
+  const isSolo = competitors.length <= 1;
 
   const navItems = [
     { href: "/dashboard", label: "Executive Command", icon: LayoutDashboard, badge: null },
     { href: "/listening", label: "Universal Listening", icon: Radio, badge: "Live" },
-    { href: "/competitors", label: "5-Way Competitor Arena", icon: Swords, badge: "5 Brands" },
+    {
+      href: "/competitors",
+      label: isSolo
+        ? `Solo ${entityType === "individual" ? "Leader" : "Brand"} Profile`
+        : `${competitors.length}-Way Arena`,
+      icon: Swords,
+      badge: isSolo ? "Solo" : `${competitors.length} Peers`,
+    },
     { href: "/sentiment", label: "Sentiment & Emotion", icon: Smile, badge: null },
     { href: "/reputation", label: "Reputation Command", icon: Award, badge: "91.4 AA+" },
     { href: "/counter-journalism", label: "Counter Yellow Media", icon: Scale, badge: "Debunk 🟢" },
     { href: "/saas", label: "SaaS & White-Label", icon: Palette, badge: "Plans" },
+    { href: "/access-control", label: "Access Control & Users", icon: UserCheck, badge: "Self-Service" },
     { href: "/credibility", label: "Credibility Risk Engine", icon: ShieldCheck, badge: "AI Risk" },
     { href: "/crisis", label: "Crisis War Room", icon: AlertTriangle, badge: "1 Active", alert: true },
     { href: "/campaigns", label: "AI Campaign Planner", icon: Megaphone, badge: null },
@@ -101,6 +121,16 @@ export const Sidebar: React.FC = () => {
             </select>
             <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
           </div>
+
+          {/* New Comparison Action in Sidebar */}
+          <button
+            onClick={() => startNewComparisonPrompt(entityType)}
+            className="w-full mt-3 py-2 px-3 bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-all cursor-pointer"
+            title="Clear old data and compare 1 to 5 individuals or brands"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>New Comparison</span>
+          </button>
         </div>
 
         {/* Main Navigation */}

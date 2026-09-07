@@ -153,10 +153,10 @@ export default function ReportingCentrePage() {
             </div>
 
             <h3 className="text-xl font-extrabold text-slate-900">
-              Traffic Light Sentiment Audit PDF 🟢🟡🔴
+              Executive Command & Traffic Light Audit PDF 🟢🟡🔴
             </h3>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              Full executive breakdown of {primaryEntity.name} sentiment across the Traffic Light spectrum: Happy ({happyPct}%), OK ({okPct}%), and Alert ({alertPct}%). Includes multilingual NLP distribution, aspect sentiment matrices, and regional IPSCAN nodes.
+              Full executive breakdown of {primaryEntity.name} featuring a dedicated **Executive Command Screen Shot**, live telemetry state, Traffic Light metrics (Happy {happyPct}%, OK {okPct}%, Alert {alertPct}%), multilingual NLP matrices, and 5-way peer benchmarks.
             </p>
 
             <div className="grid grid-cols-3 gap-2 my-4 text-xs font-bold">
@@ -180,7 +180,7 @@ export default function ReportingCentrePage() {
             className="w-full bg-green hover:bg-green-dark text-white font-bold text-xs py-3 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Download Traffic Light Sentiment PDF</span>
+            <span>Download Executive Command + Traffic Light PDF</span>
           </button>
         </div>
 

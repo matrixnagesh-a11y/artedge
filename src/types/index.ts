@@ -25,6 +25,68 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  department?: string;
+  jobTitle?: string;
+  phone?: string;
+  status: "active" | "pending_approval" | "suspended" | "invited";
+  provisioningType: "auto_domain_self_service" | "manual_invite" | "sso_jit" | "admin_created";
+  mfaEnabled: boolean;
+  mfaMethod?: "totp" | "sms" | "passkey" | "recovery";
+  mfaOptionalPreference: "disabled" | "optional_prompt" | "always_required";
+  deviceRememberedUntil?: string;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+export interface AutoSelfServiceRule {
+  id: string;
+  tenantId: string;
+  domain: string; // e.g. "@maybank.com"
+  defaultRole: UserRole;
+  autoApprove: boolean;
+  allowedDepartments: string[];
+  enforceMfaForDomain: boolean;
+  status: "active" | "paused";
+  createdAt: string;
+}
+
+export interface PermissionDefinition {
+  id: string;
+  label: string;
+  category: "Analytics & Monitoring" | "Data & Triage" | "Crisis & Campaigns" | "Users & Access Control" | "Compliance & Security";
+  description: string;
+  defaultRoles: UserRole[];
+}
+
+export interface AccessAuditLog {
+  id: string;
+  timestamp: string;
+  userId?: string;
+  userName: string;
+  userEmail: string;
+  action:
+    | "self_service_register"
+    | "self_service_approved"
+    | "self_service_rejected"
+    | "mfa_toggled"
+    | "mfa_verified"
+    | "mfa_skipped"
+    | "role_changed"
+    | "status_changed"
+    | "login_success"
+    | "policy_updated";
+  details: string;
+  ipAddress: string;
+  location: string;
+  severity: "info" | "warning" | "security";
+}
+
+export interface TenantMfaPolicy {
+  enforcementLevel: "optional_all" | "enforce_admins_only" | "enforce_all";
+  allowedMethods: ("totp" | "sms" | "passkey" | "recovery")[];
+  rememberDeviceDays: number;
+  allowSkip: boolean;
+  gracePeriodDays: number;
 }
 
 export type PlatformSource =

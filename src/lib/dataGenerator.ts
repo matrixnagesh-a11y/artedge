@@ -18,6 +18,7 @@ export interface ReplenishParams {
   brandName: string;
   industry?: string;
   competitorNames?: string[];
+  isSingleEntity?: boolean;
   prompt?: string;
   region?: string;
   location?: string;
@@ -151,30 +152,53 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   const preset = INDUSTRY_PRESETS[detectedIndustry] || INDUSTRY_PRESETS.banking;
   const individualPreset = INDIVIDUAL_PRESETS[detectedIndustry] || INDIVIDUAL_PRESETS.politics;
 
+  const isSingle = params.isSingleEntity === true || (params.competitorNames !== undefined && params.competitorNames.length === 0);
+
   let rawCompNames: string[] = [];
-  if (params.competitorNames && params.competitorNames.length > 0) {
+  if (!isSingle && params.competitorNames && params.competitorNames.length > 0) {
     rawCompNames = params.competitorNames
       .map((s) => s.trim())
       .filter((s) => s.length > 0 && s.toLowerCase() !== brand.toLowerCase());
   }
 
-  // Fallback if user provided fewer than 4 competitors
-  const fallbackList: string[] = isIndividual
-    ? individualPreset.commonCompetitors.map((c) => c.name)
-    : preset.commonCompetitors;
-
   const finalCompNames: string[] = [];
-  for (const name of rawCompNames) {
-    if (!finalCompNames.includes(name) && name.toLowerCase() !== brand.toLowerCase()) {
-      finalCompNames.push(name);
+  if (!isSingle) {
+    for (const name of rawCompNames) {
+      if (!finalCompNames.includes(name) && name.toLowerCase() !== brand.toLowerCase()) {
+        finalCompNames.push(name);
+      }
+      if (finalCompNames.length >= 4) break;
     }
-    if (finalCompNames.length >= 4) break;
+    // Only fall back to presets if competitorNames was completely omitted/undefined
+    if (params.competitorNames === undefined) {
+      const fallbackList: string[] = isIndividual
+        ? individualPreset.commonCompetitors.map((c) => c.name)
+        : preset.commonCompetitors;
+      for (const fb of fallbackList) {
+        if (finalCompNames.length >= 4) break;
+        if (!finalCompNames.includes(fb) && fb.toLowerCase() !== brand.toLowerCase()) {
+          finalCompNames.push(fb);
+        }
+      }
+    }
   }
-  for (const fb of fallbackList) {
-    if (finalCompNames.length >= 4) break;
-    if (!finalCompNames.includes(fb) && fb.toLowerCase() !== brand.toLowerCase()) {
-      finalCompNames.push(fb);
-    }
+
+  // Dynamic Share of Voice distribution
+  let primarySov = 100.0;
+  let peerSovs: number[] = [];
+
+  if (finalCompNames.length === 1) {
+    primarySov = 58.0;
+    peerSovs = [42.0];
+  } else if (finalCompNames.length === 2) {
+    primarySov = 46.0;
+    peerSovs = [32.0, 22.0];
+  } else if (finalCompNames.length === 3) {
+    primarySov = 40.0;
+    peerSovs = [28.0, 20.0, 12.0];
+  } else if (finalCompNames.length >= 4) {
+    primarySov = 38.4;
+    peerSovs = [26.2, 17.5, 11.4, 6.5];
   }
 
   let competitors: CompetitorComparison[] = [];
@@ -189,9 +213,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         entityType: "individual",
         titleOrRole: "Primary Candidate & Monitored Leader",
         metrics: {
-          mentionVolume: 14820,
-          shareOfVoicePercent: 38.4,
-          reach: 2450000,
+          mentionVolume: finalCompNames.length === 0 ? 21500 : 14820,
+          shareOfVoicePercent: primarySov,
+          reach: finalCompNames.length === 0 ? 3200000 : 2450000,
           engagementRate: 5.6,
           sentimentScore: 86.2,
           reputationRiskScore: 16.4,
@@ -224,7 +248,7 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         topTopics: individualPreset.keywords.slice(0, 4),
       },
       ...finalCompNames.map((peerName, idx): CompetitorComparison => {
-        const sovList = [26.2, 17.5, 11.4, 6.5];
+        const sov = peerSovs[idx] || 15.0;
         const sentList = [78.4, 82.0, 71.5, 68.0];
         const riskList = [24.0, 18.5, 36.0, 42.0];
         const localStandingList = [88, 85, 79, 74];
@@ -246,14 +270,14 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           entityType: "individual",
           titleOrRole: "Peer Leader & Candidate",
           metrics: {
-            mentionVolume: Math.round(14820 * (sovList[idx] / 38.4)),
-            shareOfVoicePercent: sovList[idx] || 15.0,
-            reach: Math.round(2450000 * (sovList[idx] / 38.4)),
+            mentionVolume: Math.round(14820 * (sov / 38.4)),
+            shareOfVoicePercent: sov,
+            reach: Math.round(2450000 * (sov / 38.4)),
             engagementRate: Number((4.1 + idx * 0.3).toFixed(1)),
             sentimentScore: sentList[idx] || 72.0,
             reputationRiskScore: riskList[idx] || 25.0,
             credibilityIndex: Number((93.0 - idx * 3.0).toFixed(1)),
-            leadIntentCount: Math.round(184 * (sovList[idx] / 38.4)),
+            leadIntentCount: Math.round(184 * (sov / 38.4)),
             brandVisibilityIndex: Number((82.0 - idx * 5.0).toFixed(1)),
             competitiveEdgeScore: Number((78.0 - idx * 4.5).toFixed(1)),
           },
@@ -291,9 +315,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         entityType: "company",
         titleOrRole: "Enterprise Brand",
         metrics: {
-          mentionVolume: 18450,
-          shareOfVoicePercent: 36.8,
-          reach: 1850000,
+          mentionVolume: finalCompNames.length === 0 ? 24500 : 18450,
+          shareOfVoicePercent: primarySov,
+          reach: finalCompNames.length === 0 ? 2500000 : 1850000,
           engagementRate: 4.8,
           sentimentScore: 84.5,
           reputationRiskScore: 18.2,
@@ -313,7 +337,7 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         topTopics: preset.keywords.slice(0, 4),
       },
       ...finalCompNames.map((name, idx): CompetitorComparison => {
-        const sovList = [24.5, 18.2, 12.1, 8.4];
+        const sov = peerSovs[idx] || 15.0;
         const sentList = [68.0, 74.2, 59.5, 62.0];
         const riskList = [34.0, 22.5, 48.0, 39.2];
         return {
@@ -323,14 +347,14 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           entityType: "company",
           titleOrRole: "Direct Competitor",
           metrics: {
-            mentionVolume: Math.round(18450 * (sovList[idx] / 36.8)),
-            shareOfVoicePercent: sovList[idx] || 15.0,
-            reach: Math.round(1850000 * (sovList[idx] / 36.8)),
+            mentionVolume: Math.round(18450 * (sov / 36.8)),
+            shareOfVoicePercent: sov,
+            reach: Math.round(1850000 * (sov / 36.8)),
             engagementRate: Number((3.2 + idx * 0.4).toFixed(1)),
             sentimentScore: sentList[idx] || 70.0,
             reputationRiskScore: riskList[idx] || 25.0,
             credibilityIndex: Number((91.0 - idx * 3.5).toFixed(1)),
-            leadIntentCount: Math.round(312 * (sovList[idx] / 36.8)),
+            leadIntentCount: Math.round(312 * (sov / 36.8)),
             brandVisibilityIndex: Number((76.0 - idx * 6.0).toFixed(1)),
             competitiveEdgeScore: Number((72.0 - idx * 5.5).toFixed(1)),
           },
@@ -371,13 +395,19 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   let mentions: MentionItem[] = [];
 
   const platforms: PlatformSource[] = ["x", "news", "facebook", "youtube", "forum", "x", "news", "facebook"];
-  const allTargetEntities = [
-    { name: brand, share: 45, isPrimary: true },
-    { name: compNames[0] || "C.P. Yogeshwara", share: 20, isPrimary: false },
-    { name: compNames[1] || "D.K. Suresh", share: 16, isPrimary: false },
-    { name: compNames[2] || "H.D. Kumaraswamy", share: 14, isPrimary: false },
-    { name: compNames[3] || "A. Manjunath", share: 10, isPrimary: false },
-  ];
+  const allTargetEntities: { name: string; share: number; isPrimary: boolean }[] = [];
+  if (compNames.length === 0) {
+    allTargetEntities.push({ name: brand, share: 75, isPrimary: true });
+  } else {
+    allTargetEntities.push({ name: brand, share: Math.round(primarySov), isPrimary: true });
+    compNames.forEach((peer, pIdx) => {
+      allTargetEntities.push({
+        name: peer,
+        share: Math.max(8, Math.round(peerSovs[pIdx] || 15)),
+        isPrimary: false,
+      });
+    });
+  }
 
   if (isIndividual) {
     const authorPool = [
@@ -671,15 +701,23 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   const recommendations: CompetitiveRecommendation[] = [
     {
       id: "rec-gen-1",
-      category: "competitor_weakness",
-      title: `Amplify ${brand}'s Leadership Advantage vs ${compNames[0] || "Competitor 1"}`,
+      category: compNames.length > 0 ? "competitor_weakness" : "timing_optimization",
+      title: compNames.length > 0
+        ? `Amplify ${brand}'s Leadership Advantage vs ${compNames[0]}`
+        : `Amplify ${brand}'s Public Leadership & Ground Engagement`,
       description: isIndividual
-        ? `Highlight ${brand}'s proven track record and ground support in contrast to ${compNames[0] || "rival"}'s lower sentiment scores.`
-        : `Publish verified case studies highlighting ${brand}'s superior reliability and customer service over ${compNames[0] || "competitors"}.`,
+        ? (compNames.length > 0
+            ? `Highlight ${brand}'s proven track record and ground support in contrast to ${compNames[0]}'s lower sentiment scores.`
+            : `Strengthen ${brand}'s direct public outreach camps and highlight delivered constituency development initiatives.`)
+        : (compNames.length > 0
+            ? `Publish verified case studies highlighting ${brand}'s superior reliability and customer service over ${compNames[0]}.`
+            : `Publish verified case studies highlighting ${brand}'s customer satisfaction and market reliability.`),
       expectedBenefit: isIndividual
-        ? "Consolidate +12% voter trust and positive share of voice"
-        : "Capture +15% enterprise market share from competitors",
-      supportingEvidence: `${compNames[0] || "Competitor"} scored lower in sentiment (68.0) during recent discussions.`,
+        ? (compNames.length > 0 ? "Consolidate +12% voter trust and positive share of voice" : "Increase constituency goodwill and trust score by +15%")
+        : "Capture +15% enterprise customer confidence and engagement",
+      supportingEvidence: compNames.length > 0
+        ? `${compNames[0]} scored lower in sentiment during recent discussions.`
+        : `Direct public reception in local wards shows 86%+ positive sentiment index.`,
       confidenceScore: 95,
       estimatedEffort: "Medium",
       priority: "High",
@@ -689,10 +727,16 @@ export function generateReplenishedDataset(params: ReplenishParams) {
     {
       id: "rec-gen-2",
       category: "content_gap",
-      title: `Address Comparative Questions Across Digital Channels`,
-      description: `Proactively release infographics and verified facts comparing ${brand} with ${compNames.slice(0, 3).join(", ")} to preempt misinformation.`,
+      title: compNames.length > 0
+        ? `Address Comparative Questions Across Digital Channels`
+        : `Proactive Fact-Checking & Community Transparency Hub`,
+      description: compNames.length > 0
+        ? `Proactively release infographics and verified facts comparing ${brand} with ${compNames.slice(0, 3).join(", ")} to preempt misinformation.`
+        : `Proactively publish verified progress reports on local developmental promises for ${brand} to preempt rumors.`,
       expectedBenefit: "Safeguard reputation and increase public trust score by 8 points",
-      supportingEvidence: `Ongoing discussions comparing all 5 entities across social media.`,
+      supportingEvidence: compNames.length > 0
+        ? `Ongoing comparative discussions across social media.`
+        : `High engagement on official speeches and townhall interactions.`,
       confidenceScore: 90,
       estimatedEffort: "Low",
       priority: "Medium",
@@ -706,16 +750,16 @@ export function generateReplenishedDataset(params: ReplenishParams) {
     id: "crisis-gen-1",
     tenantId: "tenant-active",
     title: isIndividual
-      ? `Unsubstantiated Smear Narrative Circulating Against ${brand}`
-      : `Misleading Product Comparison Claims by Competitor Accounts`,
+      ? (compNames.length > 0 ? `Unsubstantiated Smear Narrative Circulating Against ${brand}` : `Unverified Constituency Rumor Flagged for ${brand}`)
+      : (compNames.length > 0 ? `Misleading Product Comparison Claims by Competitor Accounts` : `Unsubstantiated Operational Speculation for ${brand}`),
     severity: "medium",
     status: "mitigated",
     detectedAt: "2 hours ago",
     mentionVelocitySpike: 110,
     topNarratives: [
       isIndividual
-        ? `Opposition claims regarding ${brand}'s public schedule and campaign reach`
-        : `Claims of service limitations compared to ${compNames[0] || "competitor"}`,
+        ? (compNames.length > 0 ? `Opposition claims regarding ${brand}'s public schedule and campaign reach` : `Unverified speculation regarding ${brand}'s local project delivery schedule`)
+        : (compNames.length > 0 ? `Claims of service limitations compared to ${compNames[0]}` : `Unsubstantiated claims regarding ${brand}'s platform SLA`),
     ],
     verifiedFacts: [
       isIndividual

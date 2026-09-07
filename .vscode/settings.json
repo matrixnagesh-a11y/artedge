@@ -1,0 +1,14 @@
+{
+  "aws.telemetry": false,
+  "aws.suppressPrompts": {
+    "login": true,
+    "credentials": true,
+    "regionPrompt": true,
+    "cloudFormation": true,
+    "survey": true
+  },
+  "aws.samcli.enableCodeLenses": false,
+  "aws.cloudformation.enableValidation": false,
+  "yaml.validate": false,
+  "yaml.schemas": {}
+}

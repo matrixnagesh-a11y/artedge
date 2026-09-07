@@ -28,5 +28,19 @@
     "s3ConsoleUrl": "https://s3.console.aws.amazon.com/s3/buckets/artedge-vault-715616248593-ap-southeast-1?region=ap-southeast-1",
     "localRunningServer": "http://localhost:3001"
   },
-  "status": "HOSTED_ON_AMPLIFY"
+  "status": "CONFIRMED_ON_AWS",
+  "ecrRepositoryArn": "arn:aws:ecr:ap-southeast-1:715616248593:repository/artedge-production",
+  "secretsManager": {
+    "configSecretName": "artedge/production/config",
+    "configSecretArn": "arn:aws:secretsmanager:ap-southeast-1:715616248593:secret:artedge/production/config-Domm5F",
+    "dbSecretArn": "arn:aws:secretsmanager:ap-southeast-1:715616248593:secret:mychild/dev/db-credentials-e6487X"
+  },
+  "buildStatus": {
+    "framework": "Next.js 14 Standalone",
+    "status": "BUILD_SUCCESSFUL",
+    "standaloneBundle": true,
+    "serverJsEntrypoint": true,
+    "dockerReady": true
+  },
+  "verifiedAt": "2026-09-04T05:30:43.111Z"
 }

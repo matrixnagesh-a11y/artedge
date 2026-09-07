@@ -1,33 +1,54 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTenant } from "@/context/TenantContext";
-import { ShieldCheck, AlertTriangle, Search, CheckCircle2, Network, ExternalLink, HelpCircle, UserCheck } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Search, CheckCircle2, Network, ExternalLink, HelpCircle, UserCheck, RotateCw } from "lucide-react";
 
 export default function CredibilityRiskPage() {
-  const { mentions, primaryEntity } = useTenant();
+  const { mentions, primaryEntity, refreshCurrentData, isReplenishing } = useTenant();
   const isIndividual = primaryEntity.type === "individual";
   const [factCheckQuery, setFactCheckQuery] = useState(`${primaryEntity.name} verification query`);
-  const [factCheckResults, setFactCheckResults] = useState([
-    {
-      claim: isIndividual
-        ? `Unverified speculation regarding ${primaryEntity.name} constituency welfare delivery`
-        : `Unsubstantiated operational security rumor targeting ${primaryEntity.name}`,
-      publisher: isIndividual ? "Regional Electoral & Development Verification Desk" : "Independent Cyber Security Audit Desk",
-      rating: "FALSE (Unsubstantiated Rumor)",
-      url: "https://artedge.app/fact-check",
-      date: "2026-08-28",
-    },
-    {
-      claim: isIndividual
-        ? `${primaryEntity.name} official development announcement and community initiatives`
-        : `${primaryEntity.name} verified enterprise partnership and service expansion`,
-      publisher: "Official State News & Verified Press Wire",
-      rating: "TRUE (Verified Official Press Release)",
-      url: "https://artedge.app/press",
-      date: "2026-08-30",
-    },
-  ]);
+  const [factCheckResults, setFactCheckResults] = useState<Array<{
+    claim: string;
+    publisher: string;
+    rating: string;
+    url: string;
+    date: string;
+  }>>([]);
+
+  // Automatically refresh credibility and fact-check records when primaryEntity changes or is updated
+  useEffect(() => {
+    setFactCheckQuery(`${primaryEntity.name} verification query`);
+    setFactCheckResults([
+      {
+        claim: isIndividual
+          ? `Unverified speculation regarding ${primaryEntity.name} constituency welfare delivery and funding`
+          : `Unsubstantiated operational security rumor targeting ${primaryEntity.name}`,
+        publisher: isIndividual ? "Regional Electoral & Development Verification Desk" : "Independent Cyber Security Audit Desk",
+        rating: "FALSE (Unsubstantiated Rumor)",
+        url: "https://artedge.app/fact-check",
+        date: "2026-09-02",
+      },
+      {
+        claim: isIndividual
+          ? `${primaryEntity.name} official civic roadmap and community initiatives verified`
+          : `${primaryEntity.name} verified enterprise partnership and service expansion`,
+        publisher: "Official State News & Verified Press Wire",
+        rating: "TRUE (Verified Official Press Release)",
+        url: "https://artedge.app/press",
+        date: "2026-09-05",
+      },
+      {
+        claim: isIndividual
+          ? `Allegations of unauthorized rally endorsement by ${primaryEntity.name}`
+          : `Market rumor regarding supply chain suspension for ${primaryEntity.name}`,
+        publisher: "FactCheck National Bureau",
+        rating: "MISLEADING (Out of Context Video)",
+        url: "https://artedge.app/fact-check",
+        date: "2026-09-06",
+      },
+    ]);
+  }, [primaryEntity.name, isIndividual]);
 
   return (
     <div className="space-y-8 pb-12">
@@ -38,14 +59,23 @@ export default function CredibilityRiskPage() {
             <ShieldCheck className="w-4 h-4 text-violet-light" />
             <span className="text-xs font-bold text-violet-light uppercase tracking-wider">Explainable AI Risk Engine</span>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Credibility & Manipulation Risk Engine</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Credibility & Manipulation Risk: {primaryEntity.name}</h1>
           <p className="text-xs text-slate-200 mt-1 max-w-xl">
             Dual-metric explainable risk assessment evaluating evidence corroboration, source transparency, and bot network amplification without automatic legal judgements.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/20">
+          <button
+            onClick={() => refreshCurrentData(false)}
+            disabled={isReplenishing}
+            className="px-3.5 py-2 bg-white text-slate-900 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-60"
+            title="Re-run credibility verification analysis"
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-primary ${isReplenishing ? "animate-spin" : ""}`} />
+            <span>{isReplenishing ? "Scanning..." : "Re-scan Target"}</span>
+          </button>
+          <div className="px-3 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/20">
             Fact Check Tools API Integrated
           </div>
         </div>

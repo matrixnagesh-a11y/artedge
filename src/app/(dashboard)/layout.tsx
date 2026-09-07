@@ -1,6 +1,7 @@
 import React from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { TrialUpgradePromptModal } from "@/components/common/TrialUpgradePromptModal";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
         <main className="flex-1 p-6 md:p-8 overflow-y-auto">{children}</main>
+        <TrialUpgradePromptModal />
       </div>
     </div>
   );

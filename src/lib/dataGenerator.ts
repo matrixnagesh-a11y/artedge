@@ -152,7 +152,10 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   const preset = INDUSTRY_PRESETS[detectedIndustry] || INDUSTRY_PRESETS.banking;
   const individualPreset = INDIVIDUAL_PRESETS[detectedIndustry] || INDIVIDUAL_PRESETS.politics;
 
-  const isSingle = params.isSingleEntity === true || (params.competitorNames !== undefined && params.competitorNames.length === 0);
+  const isSingle =
+    params.isSingleEntity === true ||
+    (params.competitorNames !== undefined && params.competitorNames.length === 0) ||
+    (isIndividual && (!params.competitorNames || params.competitorNames.length === 0));
 
   let rawCompNames: string[] = [];
   if (!isSingle && params.competitorNames && params.competitorNames.length > 0) {
@@ -162,23 +165,20 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   }
 
   const finalCompNames: string[] = [];
-  if (!isSingle) {
+  if (!isSingle && rawCompNames.length > 0) {
     for (const name of rawCompNames) {
       if (!finalCompNames.includes(name) && name.toLowerCase() !== brand.toLowerCase()) {
         finalCompNames.push(name);
       }
       if (finalCompNames.length >= 4) break;
     }
-    // Only fall back to presets if competitorNames was completely omitted/undefined
-    if (params.competitorNames === undefined) {
-      const fallbackList: string[] = isIndividual
-        ? individualPreset.commonCompetitors.map((c) => c.name)
-        : preset.commonCompetitors;
-      for (const fb of fallbackList) {
-        if (finalCompNames.length >= 4) break;
-        if (!finalCompNames.includes(fb) && fb.toLowerCase() !== brand.toLowerCase()) {
-          finalCompNames.push(fb);
-        }
+  } else if (!isSingle && params.competitorNames === undefined && !isIndividual) {
+    // Only corporate company scans fall back to industry competitor presets when unspecified
+    const fallbackList: string[] = preset.commonCompetitors;
+    for (const fb of fallbackList) {
+      if (finalCompNames.length >= 4) break;
+      if (!finalCompNames.includes(fb) && fb.toLowerCase() !== brand.toLowerCase()) {
+        finalCompNames.push(fb);
       }
     }
   }

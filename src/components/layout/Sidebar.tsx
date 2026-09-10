@@ -70,7 +70,7 @@ export const Sidebar: React.FC = () => {
     { href: "/compliance", label: "PDPA 2.0 Compliance", icon: ShieldAlert, badge: "PDPA 2.0" },
     { href: "/connectors", label: "Source Connectors", icon: Share2, badge: "7 APIs" },
     { href: "/onboarding", label: "Onboarding Wizard", icon: Sparkles, badge: "Setup" },
-    { href: "/login", label: "Instant Access & Auth", icon: LogIn, badge: "Auto" },
+    { href: "/login", label: "Client Auth & 2FA", icon: LogIn, badge: "2FA" },
   ];
 
   const rolesList: { role: UserRole; label: string }[] = [
@@ -84,8 +84,6 @@ export const Sidebar: React.FC = () => {
     { role: "compliance_auditor", label: "Compliance Auditor" },
   ];
 
-  const isFreeTrial = currentTenantSaaSConfig?.currentPlanId === "free_trial";
-
   return (
     <aside className="w-72 bg-card border-r border-slate-200 flex flex-col justify-between h-screen sticky top-0 z-30 select-none">
       <div>
@@ -95,7 +93,7 @@ export const Sidebar: React.FC = () => {
             <MatrixLogo />
           </Link>
           <span className="px-2 py-0.5 text-[9px] font-extrabold bg-primary-light text-primary border border-primary/20 rounded-full uppercase tracking-wider">
-            {isFreeTrial ? "Trial Mode" : "SaaS White-Label"}
+            Multi-Client SaaS
           </span>
         </div>
 

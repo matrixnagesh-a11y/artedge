@@ -28,6 +28,8 @@ export interface UserProfile {
   department?: string;
   jobTitle?: string;
   phone?: string;
+  password?: string;
+  organizationName?: string;
   status: "active" | "pending_approval" | "suspended" | "invited";
   provisioningType: "auto_domain_self_service" | "manual_invite" | "sso_jit" | "admin_created";
   mfaEnabled: boolean;
@@ -438,7 +440,7 @@ export interface ConnectorHealth {
   commercialStatus: "Authorized API" | "OAuth Active" | "Permitted Web";
 }
 
-export type SubscriptionPlanId = "free_trial" | "pro_growth" | "enterprise_sovereign";
+export type SubscriptionPlanId = "basic" | "free_trial" | "pro_growth" | "enterprise_sovereign";
 
 export interface SubscriptionPlan {
   id: SubscriptionPlanId;

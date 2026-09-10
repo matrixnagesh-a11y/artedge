@@ -35,7 +35,6 @@ import {
   Mail,
   Building,
   Briefcase,
-  Phone,
   UserX,
   ExternalLink,
   Info,
@@ -964,7 +963,7 @@ export default function AccessControlPage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    defaultValue="+60 12-345 6789"
+                    placeholder="Enter mobile number with country code"
                     className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-bold focus:outline-none"
                   />
                   <button

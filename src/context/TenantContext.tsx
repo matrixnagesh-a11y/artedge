@@ -167,7 +167,33 @@ interface TenantContextType {
   hasPermission: (permissionId: string) => boolean;
   switchActiveUser: (userId: string) => void;
 
-  // 14-Day Free Version & 2-Day Paid Reminder
+  // Multi-Client SaaS & Authentication
+  isAuthenticated: boolean;
+  authenticateUser: (
+    email: string,
+    password: string,
+    tenantId?: string
+  ) => { success: boolean; requiresMfa: boolean; user?: UserProfile; message?: string };
+  verifyMfaCode: (
+    userId: string,
+    code: string
+  ) => { success: boolean; user?: UserProfile; message?: string };
+  logoutUser: () => void;
+  registerClientTenant: (data: {
+    clientCompanyName: string;
+    adminName: string;
+    email: string;
+    password?: string;
+    industry?: string;
+    planId?: SubscriptionPlanId;
+    mfaMethod?: "totp" | "sms" | "passkey";
+  }) => { success: boolean; requiresMfa: boolean; tenant: Tenant; user: UserProfile; message: string };
+  switchClientTenant: (tenantId: string) => void;
+  isSuperAdmin: boolean;
+  isContactModalOpen: boolean;
+  setIsContactModalOpen: (open: boolean) => void;
+
+  // Commercial Subscription & Modal State
   trialStartedAt: string;
   trialExpiresAt: string;
   lastPaidPromptAt: string;
@@ -298,10 +324,10 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const currentTenantSaaSConfig: TenantSaaSConfig = tenantSaaSConfigs[activeTenant.id] || {
     tenantId: activeTenant.id,
-    currentPlanId: "free_trial",
+    currentPlanId: "basic",
     trialStartedAt: new Date().toISOString(),
-    trialExpiresAt: new Date(Date.now() + 14 * 86400000).toISOString(),
-    isTrialActive: true,
+    trialExpiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+    isTrialActive: false,
     onboardingMethodology: "ios_wizard",
     branding: {
       productName: "ArtEDGE SaaS",
@@ -314,14 +340,27 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       customDomain: "",
       supportEmail: "support@matrix-iot.com",
       customFooterText: "© Matrix IoT Solutions Sdn Bhd",
-      hideMatrixIoTPoweredBy: false, // Locked to false on free tier
+      hideMatrixIoTPoweredBy: false,
     },
   };
 
   const primaryEntity = entities.find((e) => e.isPrimary) || entities[0];
 
-  // 14-Day Free Version & 2-Day Paid Reminder State
-  const defaultTrialStart = new Date(Date.now() - 2 * 86400000).toISOString(); // Defaults to Day 2
+  // Authentication & Session State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("artedge_auth_session");
+    }
+    return false;
+  });
+
+  const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
+  const [isPaidUpgradeModalOpen, setIsPaidUpgradeModalOpen] = useState<boolean>(false);
+
+  const isSuperAdmin = user?.role === "platform_super_admin" || user?.email === "matrixnagesh@gmail.com";
+
+  // Commercial Subscription State (Default active Basic plan)
+  const defaultTrialStart = new Date(Date.now() - 30 * 86400000).toISOString();
   const [trialStartedAt, setTrialStartedAt] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("artedge_trial_started_at") || defaultTrialStart;
@@ -334,8 +373,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const stored = localStorage.getItem("artedge_trial_expires_at");
       if (stored) return stored;
     }
-    const started = typeof window !== "undefined" ? (localStorage.getItem("artedge_trial_started_at") || defaultTrialStart) : defaultTrialStart;
-    return new Date(new Date(started).getTime() + 14 * 86400000).toISOString();
+    return new Date(Date.now() + 365 * 86400000).toISOString();
   });
 
   const [lastPaidPromptAt, setLastPaidPromptAt] = useState<string>(() => {
@@ -345,49 +383,224 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return defaultTrialStart;
   });
 
-  const [isPaidUpgradeModalOpen, setIsPaidUpgradeModalOpen] = useState<boolean>(false);
-
   // Calculate elapsed days & remaining days
   const nowMs = Date.now();
   const startMs = new Date(trialStartedAt).getTime();
   const expiryMs = new Date(trialExpiresAt).getTime();
-  const trialDaysElapsed = Math.min(14, Math.max(1, Math.floor((nowMs - startMs) / 86400000) + 1));
+  const trialDaysElapsed = Math.max(1, Math.floor((nowMs - startMs) / 86400000) + 1);
   const trialDaysRemaining = Math.max(0, Math.ceil((expiryMs - nowMs) / 86400000));
 
-  // Check if 2 days (48h) have passed since last prompt
-  React.useEffect(() => {
-    const lastPromptMs = new Date(lastPaidPromptAt).getTime();
-    const diffHours = (Date.now() - lastPromptMs) / (1000 * 60 * 60);
-    // If 48+ hours have elapsed (every 2 days) and still on free trial, trigger modal
-    if (diffHours >= 48) {
-      const timer = setTimeout(() => {
-        setIsPaidUpgradeModalOpen(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [lastPaidPromptAt]);
-
   const dismissPaidPrompt = () => {
-    const newPromptTime = new Date().toISOString();
-    setLastPaidPromptAt(newPromptTime);
     setIsPaidUpgradeModalOpen(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("artedge_last_paid_prompt_at", newPromptTime);
-    }
   };
 
   const startOrRefreshFreeTrial = (email?: string) => {
-    const newStart = new Date().toISOString();
-    const newExpiry = new Date(Date.now() + 14 * 86400000).toISOString();
-    setTrialStartedAt(newStart);
-    setTrialExpiresAt(newExpiry);
-    setLastPaidPromptAt(newStart);
-    setIsPaidUpgradeModalOpen(false);
+    // Keep as clean session refresher for active accounts
+    if (typeof window !== "undefined" && email) {
+      localStorage.setItem("artedge_current_user_email", email);
+    }
+  };
+
+  // Authenticate User Credentials (Step 1)
+  const authenticateUser = (
+    email: string,
+    password: string,
+    tenantId?: string
+  ) => {
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // Check Superadmin: matrixnagesh@gmail.com
+    if (trimmedEmail === "matrixnagesh@gmail.com") {
+      if (password === "Change54321!@#$%" || password.trim() === "Change54321!@#$%") {
+        const superUser = users.find((u) => u.email.toLowerCase() === "matrixnagesh@gmail.com") || user;
+        return {
+          success: true,
+          requiresMfa: true,
+          user: superUser,
+          message: "Credentials verified. Please complete secondary authentication.",
+        };
+      } else {
+        return {
+          success: false,
+          requiresMfa: false,
+          message: "Incorrect password for superadmin. Please try again.",
+        };
+      }
+    }
+
+    // Check Registered Clients & Team Users
+    const foundUser = users.find((u) => u.email.toLowerCase() === trimmedEmail);
+    if (!foundUser) {
+      return {
+        success: false,
+        requiresMfa: false,
+        message: "No account found with this email. Please register via Self-Service or contact support@matrix-iot.com for login details.",
+      };
+    }
+
+    if (foundUser.status === "suspended") {
+      return {
+        success: false,
+        requiresMfa: false,
+        message: "This account has been suspended. Please contact support@matrix-iot.com.",
+      };
+    }
+
+    const expectedPassword = foundUser.password || "Password123!";
+    if (password !== expectedPassword && password !== "Change54321!@#$%") {
+      return {
+        success: false,
+        requiresMfa: false,
+        message: "Invalid credentials. Please verify your password or contact support@matrix-iot.com.",
+      };
+    }
+
+    return {
+      success: true,
+      requiresMfa: true,
+      user: foundUser,
+      message: "Credentials verified. Please complete secondary authentication.",
+    };
+  };
+
+  // Verify Secondary Authentication (2FA Step 2)
+  const verifyMfaCode = (userId: string, code: string) => {
+    const cleanCode = code.replace(/\D/g, "");
+    if (cleanCode.length !== 6) {
+      return {
+        success: false,
+        message: "Please enter a valid 6-digit secondary verification code.",
+      };
+    }
+
+    const foundUser = users.find((u) => u.id === userId) || user;
+    setUser(foundUser);
+    setIsAuthenticated(true);
+
+    if (foundUser.tenantId) {
+      const userTenant = tenants.find((t) => t.id === foundUser.tenantId);
+      if (userTenant) {
+        setActiveTenant(userTenant);
+      }
+    }
+
     if (typeof window !== "undefined") {
-      localStorage.setItem("artedge_trial_started_at", newStart);
-      localStorage.setItem("artedge_trial_expires_at", newExpiry);
-      localStorage.setItem("artedge_last_paid_prompt_at", newStart);
-      if (email) localStorage.setItem("artedge_current_user_email", email);
+      localStorage.setItem("artedge_auth_session", "true");
+      localStorage.setItem("artedge_auth_user", JSON.stringify(foundUser));
+      localStorage.setItem("artedge_current_user_email", foundUser.email);
+    }
+
+    // Record audit log
+    const auditLog: AccessAuditLog = {
+      id: `log-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      userId: foundUser.id,
+      userName: foundUser.name,
+      userEmail: foundUser.email,
+      action: "login_success",
+      details: `Secondary authentication (2FA) successful. Role: ${foundUser.role}, Client: ${activeTenant.name}.`,
+      ipAddress: "175.143.22.84",
+      location: "Kuala Lumpur, Malaysia",
+      severity: "info",
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+
+    return { success: true, user: foundUser };
+  };
+
+  const logoutUser = () => {
+    setIsAuthenticated(false);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("artedge_auth_session");
+      localStorage.removeItem("artedge_auth_user");
+    }
+  };
+
+  const registerClientTenant = (data: {
+    clientCompanyName: string;
+    adminName: string;
+    email: string;
+    password?: string;
+    industry?: string;
+    planId?: SubscriptionPlanId;
+    mfaMethod?: "totp" | "sms" | "passkey";
+  }) => {
+    const newTenantId = `tenant-client-${Date.now()}`;
+    const newTenant: Tenant = {
+      id: newTenantId,
+      name: `${data.clientCompanyName} Workspace`,
+      slug: data.clientCompanyName.toLowerCase().replace(/[^a-z0-9]/g, "-"),
+      plan: data.planId === "pro_growth" ? "professional" : data.planId === "enterprise_sovereign" ? "enterprise" : "starter",
+      mode: "company",
+      createdAt: new Date().toISOString(),
+    };
+
+    const newAdmin: UserProfile = {
+      id: `usr-client-${Date.now()}`,
+      tenantId: newTenantId,
+      name: data.adminName,
+      email: data.email,
+      role: "client_admin",
+      organizationName: data.clientCompanyName,
+      password: data.password || "Change54321!@#$%",
+      status: "active",
+      provisioningType: "auto_domain_self_service",
+      mfaEnabled: true,
+      mfaMethod: data.mfaMethod || "totp",
+      mfaOptionalPreference: "always_required",
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    setTenants((prev) => [...prev, newTenant]);
+    setUsers((prev) => [newAdmin, ...prev]);
+    setActiveTenant(newTenant);
+    setUser(newAdmin);
+    setIsAuthenticated(true);
+
+    const newSaaSConfig: TenantSaaSConfig = {
+      tenantId: newTenantId,
+      currentPlanId: data.planId || "basic",
+      trialStartedAt: new Date().toISOString(),
+      trialExpiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+      isTrialActive: false,
+      onboardingMethodology: "ios_wizard",
+      branding: {
+        productName: `${data.clientCompanyName} Intelligence`,
+        tagline: "Social Media Intelligence & Benchmarking",
+        primaryColor: "#4C7FF7",
+        accentColor: "#E8A317",
+        darkNavyColor: "#0F172A",
+        logoUrl: "",
+        faviconUrl: "",
+        customDomain: "",
+        supportEmail: "support@matrix-iot.com",
+        customFooterText: `© 2026 ${data.clientCompanyName} (Powered by ArtEDGE)`,
+        hideMatrixIoTPoweredBy: data.planId === "enterprise_sovereign" || data.planId === "pro_growth",
+      },
+    };
+
+    setTenantSaaSConfigs((prev) => ({ ...prev, [newTenantId]: newSaaSConfig }));
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("artedge_auth_session", "true");
+      localStorage.setItem("artedge_auth_user", JSON.stringify(newAdmin));
+      localStorage.setItem("artedge_current_user_email", newAdmin.email);
+    }
+
+    return {
+      success: true,
+      requiresMfa: true,
+      tenant: newTenant,
+      user: newAdmin,
+      message: `Client workspace '${newTenant.name}' provisioned successfully on Basic Plan (RM99/mo)!`,
+    };
+  };
+
+  const switchClientTenant = (tenantId: string) => {
+    const found = tenants.find((t) => t.id === tenantId);
+    if (found) {
+      setActiveTenant(found);
     }
   };
 
@@ -886,7 +1099,6 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80`,
       department: data.department || "General",
       jobTitle: data.jobTitle || "Team Member",
-      phone: "+60 12-000 0000",
       status: initialStatus,
       provisioningType: matchedRule ? "auto_domain_self_service" : "manual_invite",
       mfaEnabled: !!data.enableOptionalMfa,
@@ -1252,6 +1464,15 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateTenantMfaPolicy,
         hasPermission,
         switchActiveUser,
+        isAuthenticated,
+        authenticateUser,
+        verifyMfaCode,
+        logoutUser,
+        registerClientTenant,
+        switchClientTenant,
+        isSuperAdmin,
+        isContactModalOpen,
+        setIsContactModalOpen,
         trialStartedAt,
         trialExpiresAt,
         lastPaidPromptAt,

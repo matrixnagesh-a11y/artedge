@@ -99,7 +99,7 @@ export default function SaaSManagementPage() {
             {activeTenant.name} Subscription & Branding Command
           </h1>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
-            Configure white-label branding, select from 3 commercial subscription modules with a 14-day free trial, and manage super user onboarding methodologies.
+            Configure white-label branding, select from 3 commercial subscription modules starting at RM99/month, and manage super user onboarding methodologies.
           </p>
         </div>
 
@@ -131,17 +131,17 @@ export default function SaaSManagementPage() {
         </div>
       </div>
 
-      {/* Free Tier Mandatory Watermark Warning Banner */}
-      {isFreeTrial && (
-        <div className="p-4 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-800">
+      {/* Basic Tier Watermark Notice */}
+      {currentTenantSaaSConfig?.currentPlanId === "basic" && (
+        <div className="p-4 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-              <Lock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <strong className="text-amber-800 font-bold block">Free 14-Day Evaluation Notice: Mandatory Matrix IoT Branding Enforced</strong>
+              <strong className="text-emerald-900 font-bold block">Basic Commercial Tier Active (RM 99 / Month)</strong>
               <p className="text-slate-600 text-[11px] mt-0.5">
-                The free tier cannot be white-labeled and strictly displays the <strong>Matrix IoT Solutions Sdn Bhd</strong> watermark. Upgrade to Pro or Enterprise to remove watermarks and use your custom corporate domain.
+                Single-brand benchmarking & report downloads active. To enable custom domain white-labeling and remove Matrix IoT watermarks, upgrade to Pro or Enterprise.
               </p>
             </div>
           </div>
@@ -154,14 +154,14 @@ export default function SaaSManagementPage() {
         </div>
       )}
 
-      {/* TAB 1: 3 SUBSCRIPTION MODULES + FREE 14-DAY OPTION */}
+      {/* TAB 1: 3 SUBSCRIPTION MODULES */}
       {activeTab === "plans" && (
         <div className="space-y-8">
           {/* Billing Toggle Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-3xl border border-slate-200/80 shadow-ios">
             <div>
               <h2 className="text-lg font-black text-slate-900">Commercial Subscription Modules</h2>
-              <p className="text-xs text-slate-500">Transparent pricing for Malaysian & ASEAN enterprises with 14-day free evaluation</p>
+              <p className="text-xs text-slate-500">Transparent pricing for Malaysian & ASEAN enterprises • Basic Plan RM99/mo or contact support@matrix-iot.com</p>
             </div>
 
             <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl self-start sm:self-auto">
@@ -234,12 +234,7 @@ export default function SaaSManagementPage() {
 
                     {/* Price Display */}
                     <div className={`my-5 pb-5 border-b flex items-baseline gap-1 ${isEnterprise && !isCurrent ? "border-slate-800" : "border-slate-200"}`}>
-                      {plan.monthlyPriceMYR === 0 ? (
-                        <div>
-                          <span className={`text-4xl font-black ${isEnterprise && !isCurrent ? "text-white" : "text-slate-900"}`}>RM 0</span>
-                          <span className={`text-xs font-semibold ml-1.5 ${isEnterprise && !isCurrent ? "text-slate-400" : "text-slate-500"}`}>/ 14-day trial</span>
-                        </div>
-                      ) : billingCycle === "monthly" ? (
+                      {billingCycle === "monthly" ? (
                         <div>
                           <span className={`text-4xl font-black ${isEnterprise && !isCurrent ? "text-white" : "text-slate-900"}`}>
                             RM {plan.monthlyPriceMYR.toLocaleString()}

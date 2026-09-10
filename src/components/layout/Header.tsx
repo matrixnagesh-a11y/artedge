@@ -76,6 +76,9 @@ export const Header: React.FC = () => {
     trialDaysRemaining,
     trialDaysElapsed,
     setIsPaidUpgradeModalOpen,
+    logoutUser,
+    isSuperAdmin,
+    currentTenantSaaSConfig,
   } = useTenant();
 
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -449,18 +452,22 @@ export const Header: React.FC = () => {
             <span className="hidden sm:inline">Export</span>
           </Link>
 
-          {/* 14-Day Free Version Badge / Upgrade Trigger */}
+          {/* Commercial SaaS Tier Badge / Upgrade Trigger */}
           <button
             onClick={() => setIsPaidUpgradeModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-gold/15 to-primary/10 border border-gold/40 hover:border-gold text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
-            title="14-Day Free Trial Evaluation. Click to register for Paid Version."
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-primary/10 border border-emerald-500/30 hover:border-emerald-500 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            title="ArtEDGE Commercial SaaS Tier. Click to manage plan or contact us."
           >
-            <Clock className="w-3.5 h-3.5 text-gold-dark shrink-0" />
+            <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span className="text-[11px] font-extrabold text-slate-900">
-              Day {trialDaysElapsed}/14 Free
+              {currentTenantSaaSConfig?.currentPlanId === "enterprise_sovereign"
+                ? "Enterprise Sovereign"
+                : currentTenantSaaSConfig?.currentPlanId === "pro_growth"
+                ? "Pro Intelligence"
+                : "Basic Tier (RM99/mo)"}
             </span>
             <span className="hidden md:inline text-[10px] text-primary font-bold underline ml-0.5">
-              Upgrade
+              Plans
             </span>
           </button>
 
@@ -468,7 +475,7 @@ export const Header: React.FC = () => {
           <Link
             href="/access-control"
             className="flex items-center gap-2 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/90 transition-all text-xs shadow-2xs cursor-pointer"
-            title={`Active User: ${user.name} (${user.role}). Click to manage Access Control, Self-Service & Optional MFA.`}
+            title={`Active User: ${user.name} (${user.role}). Click to manage Access Control, Self-Service & 2FA.`}
           >
             <img
               src={user.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
@@ -479,14 +486,22 @@ export const Header: React.FC = () => {
               <span className="font-extrabold text-[11px] text-slate-900 leading-tight">{user.name}</span>
               <span className="text-[9px] text-slate-500 font-semibold leading-none">{user.role.replace("_", " ")}</span>
             </div>
-            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase ${
-              user.mfaEnabled
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-slate-100 text-slate-500"
-            }`}>
-              {user.mfaEnabled ? `2FA ${user.mfaMethod || "TOTP"}` : "2FA Opt"}
+            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700">
+              2FA Verified
             </span>
           </Link>
+
+          {/* Sign Out Button */}
+          <button
+            onClick={() => {
+              logoutUser();
+              window.location.href = "/login";
+            }}
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+            title="Sign out of workspace"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 

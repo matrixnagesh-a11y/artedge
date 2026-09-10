@@ -86,13 +86,6 @@ function LoginContent() {
     setCodeCopied(false);
   };
 
-  // 1-Click Fill Superadmin Credentials
-  const fillSuperadminCredentials = () => {
-    setEmail("matrixnagesh@gmail.com");
-    setPassword("Change54321!@#$%");
-    setErrorMsg("");
-  };
-
   // 1-Click Copy & Autofill 2FA Code
   const handleAutofillMfa = () => {
     const digits = activeTotpChallenge.split("");
@@ -332,21 +325,6 @@ function LoginContent() {
           {/* ========================================================================= */}
           {mode === "signin" && (
             <form onSubmit={handleSignInSubmit} className="space-y-4 text-xs">
-              {/* Quick Superadmin Helper Chip */}
-              <div className="p-3 bg-slate-800/80 border border-slate-700/80 rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-200 block">Superadmin Testing</span>
-                  <span className="text-[10px] text-slate-400 block font-mono">matrixnagesh@gmail.com</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={fillSuperadminCredentials}
-                  className="px-2.5 py-1 bg-primary/20 hover:bg-primary/30 text-primary-light border border-primary/40 rounded-lg text-[10px] font-extrabold cursor-pointer transition-all"
-                >
-                  Autofill Superadmin
-                </button>
-              </div>
-
               {/* Workspace / Client Tenant Selector */}
               <div>
                 <label className="font-bold text-slate-300 block mb-1">Target Client Workspace</label>
@@ -374,7 +352,7 @@ function LoginContent() {
                   <input
                     type="email"
                     required
-                    placeholder="e.g. matrixnagesh@gmail.com"
+                    placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"

@@ -47,8 +47,8 @@ export const Sidebar: React.FC = () => {
   const isSolo = competitors.length <= 1;
 
   const navItems = [
-    { href: "/dashboard", label: "Executive Command", icon: LayoutDashboard, badge: null },
-    { href: "/listening", label: "Universal Listening", icon: Radio, badge: "Live" },
+    { href: "/dashboard", label: "Executive Command", icon: LayoutDashboard, badge: null, iosBg: "from-blue-500 to-blue-600" },
+    { href: "/listening", label: "Universal Listening", icon: Radio, badge: "Live", iosBg: "from-indigo-500 to-purple-600" },
     {
       href: "/competitors",
       label: isSolo
@@ -56,21 +56,22 @@ export const Sidebar: React.FC = () => {
         : `${competitors.length}-Way Arena`,
       icon: Swords,
       badge: isSolo ? "Solo" : `${competitors.length} Peers`,
+      iosBg: "from-orange-500 to-rose-500",
     },
-    { href: "/sentiment", label: "Sentiment & Emotion", icon: Smile, badge: null },
-    { href: "/reputation", label: "Reputation Command", icon: Award, badge: "91.4 AA+" },
-    { href: "/counter-journalism", label: "Counter Yellow Media", icon: Scale, badge: "Debunk 🟢" },
-    { href: "/saas", label: "SaaS & White-Label", icon: Palette, badge: "Plans" },
-    { href: "/access-control", label: "Access Control & Users", icon: UserCheck, badge: "Self-Service" },
-    { href: "/credibility", label: "Credibility Risk Engine", icon: ShieldCheck, badge: "AI Risk" },
-    { href: "/crisis", label: "Crisis War Room", icon: AlertTriangle, badge: "1 Active", alert: true },
-    { href: "/campaigns", label: "AI Campaign Planner", icon: Megaphone, badge: null },
-    { href: "/leads", label: "Lead Radar", icon: Radar, badge: "3 New" },
-    { href: "/reports", label: "Reports & Infographics", icon: FileSpreadsheet, badge: "PDF/XLS" },
-    { href: "/compliance", label: "PDPA 2.0 Compliance", icon: ShieldAlert, badge: "PDPA 2.0" },
-    { href: "/connectors", label: "Source Connectors", icon: Share2, badge: "7 APIs" },
-    { href: "/onboarding", label: "Onboarding Wizard", icon: Sparkles, badge: "Setup" },
-    { href: "/login", label: "Client Auth & 2FA", icon: LogIn, badge: "2FA" },
+    { href: "/sentiment", label: "Sentiment & Emotion", icon: Smile, badge: null, iosBg: "from-emerald-400 to-teal-600" },
+    { href: "/reputation", label: "Reputation Command", icon: Award, badge: "91.4 AA+", iosBg: "from-amber-400 to-yellow-500" },
+    { href: "/counter-journalism", label: "Counter Yellow Media", icon: Scale, badge: "Debunk 🟢", iosBg: "from-teal-500 to-cyan-600" },
+    { href: "/saas", label: "SaaS & White-Label", icon: Palette, badge: "Plans", iosBg: "from-purple-500 to-fuchsia-600" },
+    { href: "/access-control", label: "Access Control & Users", icon: UserCheck, badge: "Self-Service", iosBg: "from-sky-500 to-blue-600" },
+    { href: "/credibility", label: "Credibility Risk Engine", icon: ShieldCheck, badge: "AI Risk", iosBg: "from-amber-500 to-orange-600" },
+    { href: "/crisis", label: "Crisis War Room", icon: AlertTriangle, badge: "1 Active", alert: true, iosBg: "from-red-500 to-rose-600" },
+    { href: "/campaigns", label: "AI Campaign Planner", icon: Megaphone, badge: null, iosBg: "from-pink-500 to-rose-500" },
+    { href: "/leads", label: "Lead Radar", icon: Radar, badge: "3 New", iosBg: "from-cyan-500 to-blue-600" },
+    { href: "/reports", label: "Reports & Infographics", icon: FileSpreadsheet, badge: "PDF/XLS", iosBg: "from-slate-600 to-slate-800" },
+    { href: "/compliance", label: "PDPA 2.0 Compliance", icon: ShieldAlert, badge: "PDPA 2.0", iosBg: "from-emerald-600 to-teal-800" },
+    { href: "/connectors", label: "Source Connectors", icon: Share2, badge: "7 APIs", iosBg: "from-blue-600 to-cyan-600" },
+    { href: "/onboarding", label: "Onboarding Wizard", icon: Sparkles, badge: "Setup", iosBg: "from-violet-500 to-purple-600" },
+    { href: "/login", label: "Client Auth & 2FA", icon: LogIn, badge: "2FA", iosBg: "from-slate-700 to-slate-900" },
   ];
 
   const rolesList: { role: UserRole; label: string }[] = [
@@ -140,15 +141,19 @@ export const Sidebar: React.FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                className={`flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold transition-all group ${
                   isActive
-                    ? "bg-primary text-white font-semibold shadow-md shadow-primary/25"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                    : "text-slate-700 hover:bg-slate-100/90 hover:text-slate-950"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-primary"}`} />
-                  <span>{item.label}</span>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-7 h-7 rounded-[8px] bg-gradient-to-b ${item.iosBg} flex items-center justify-center text-white shadow-xs shadow-black/15 shrink-0 transition-transform group-hover:scale-105`}
+                  >
+                    <Icon className="w-4 h-4 text-white stroke-[2.2]" />
+                  </div>
+                  <span className="tracking-tight">{item.label}</span>
                 </div>
                 {item.badge && (
                   <span
@@ -157,7 +162,7 @@ export const Sidebar: React.FC = () => {
                         ? "bg-coral text-white animate-pulse"
                         : isActive
                         ? "bg-white/20 text-white"
-                        : "bg-primary-light text-primary"
+                        : "bg-slate-200/70 text-slate-700"
                     }`}
                   >
                     {item.badge}

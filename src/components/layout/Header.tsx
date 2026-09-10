@@ -379,10 +379,12 @@ export const Header: React.FC = () => {
           {/* Past Projects Archive Button */}
           <button
             onClick={() => setIsPastProjectsModalOpen(true)}
-            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-800 shadow-2xs transition-all cursor-pointer"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-2xl text-xs font-bold text-slate-800 shadow-2xs transition-all cursor-pointer"
             title="View and restore archived past prompt projects"
           >
-            <FolderArchive className="w-3.5 h-3.5 text-primary" />
+            <div className="w-5 h-5 rounded-[5.5px] bg-gradient-to-b from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xs shrink-0">
+              <FolderArchive className="w-3 h-3 text-white" />
+            </div>
             <span className="hidden md:inline">Past Projects</span>
             <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
               {pastProjects.length}
@@ -396,10 +398,12 @@ export const Header: React.FC = () => {
               setModalMode(entityType);
               setIsPromptModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-black shadow-sm shadow-primary/20 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-primary to-primary-dark hover:opacity-95 text-white text-xs font-black shadow-sm shadow-primary/20 transition-all cursor-pointer"
             title="Clear old data and run a fresh comparison (1 to 5 individuals or brands)"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <div className="w-5 h-5 rounded-[5.5px] bg-gradient-to-b from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-2xs shrink-0">
+              <Sparkles className="w-3 h-3 text-white" />
+            </div>
             <span>New Comparison</span>
           </button>
 
@@ -446,19 +450,23 @@ export const Header: React.FC = () => {
           {/* Export Quick Action */}
           <Link
             href="/reports"
-            className="flex items-center gap-2 bg-primary text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl hover:bg-primary-dark transition-all shadow-sm shadow-primary/20"
+            className="flex items-center gap-2 bg-slate-900 text-white text-xs font-semibold px-3 py-1.5 rounded-2xl hover:bg-slate-800 transition-all shadow-sm"
           >
-            <Download className="w-3.5 h-3.5" />
+            <div className="w-5 h-5 rounded-[5.5px] bg-gradient-to-b from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-2xs shrink-0">
+              <Download className="w-3 h-3 text-white" />
+            </div>
             <span className="hidden sm:inline">Export</span>
           </Link>
 
           {/* Commercial SaaS Tier Badge / Upgrade Trigger */}
           <button
             onClick={() => setIsPaidUpgradeModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-primary/10 border border-emerald-500/30 hover:border-emerald-500 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-primary/10 border border-emerald-500/30 hover:border-emerald-500 text-slate-800 text-xs font-bold transition-all cursor-pointer shadow-2xs"
             title="ArtEDGE Commercial SaaS Tier. Click to manage plan or contact us."
           >
-            <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <div className="w-5 h-5 rounded-[5.5px] bg-gradient-to-b from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-2xs shrink-0">
+              <Zap className="w-3 h-3 text-white" />
+            </div>
             <span className="text-[11px] font-extrabold text-slate-900">
               {currentTenantSaaSConfig?.currentPlanId === "enterprise_sovereign"
                 ? "Enterprise Sovereign"
@@ -474,7 +482,7 @@ export const Header: React.FC = () => {
           {/* User Profile & Access Control Pill */}
           <Link
             href="/access-control"
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/90 transition-all text-xs shadow-2xs cursor-pointer"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-2xl border border-slate-200/90 transition-all text-xs shadow-2xs cursor-pointer"
             title={`Active User: ${user.name} (${user.role}). Click to manage Access Control, Self-Service & 2FA.`}
           >
             <img
@@ -497,7 +505,7 @@ export const Header: React.FC = () => {
               logoutUser();
               window.location.href = "/login";
             }}
-            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+            className="w-8 h-8 rounded-[8px] bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
             title="Sign out of workspace"
           >
             <LogOut className="w-4 h-4" />

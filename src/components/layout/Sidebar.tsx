@@ -70,7 +70,7 @@ export const Sidebar: React.FC = () => {
     { href: "/compliance", label: "PDPA 2.0 Compliance", icon: ShieldAlert, badge: "PDPA 2.0" },
     { href: "/connectors", label: "Source Connectors", icon: Share2, badge: "7 APIs" },
     { href: "/onboarding", label: "Onboarding Wizard", icon: Sparkles, badge: "Setup" },
-    { href: "/login", label: "Login & 2FA Auth", icon: LogIn, badge: "Security" },
+    { href: "/login", label: "Instant Access & Auth", icon: LogIn, badge: "Auto" },
   ];
 
   const rolesList: { role: UserRole; label: string }[] = [
@@ -206,10 +206,8 @@ export const Sidebar: React.FC = () => {
               Powered by <strong>Matrix IoT Solutions Sdn Bhd</strong>
             </p>
           )}
-          <p className="text-[9px] text-primary hover:underline">
-            <a href={`mailto:${currentTenantSaaSConfig?.branding?.supportEmail || "support@matrix-iot.com"}`}>
-              {currentTenantSaaSConfig?.branding?.supportEmail || "support@matrix-iot.com"}
-            </a>
+          <p className="text-[9px] text-slate-400 font-medium">
+            Enterprise Cloud Active • 99.9% SLA
           </p>
         </div>
       </div>

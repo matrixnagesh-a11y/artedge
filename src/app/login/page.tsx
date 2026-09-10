@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTenant } from "@/context/TenantContext";
 import { MatrixLogo } from "@/components/common/MatrixLogo";
 import {
   Lock,
-  Mail,
   Key,
   User,
   ShieldCheck,
@@ -16,6 +15,8 @@ import {
   AlertCircle,
   Clock,
   Sparkles,
+  Loader2,
+  Check,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -31,14 +32,12 @@ export default function LoginPage() {
   // Screen Mode: "signin" | "signup" | "mfa_verify"
   const [mode, setMode] = useState<"signin" | "signup" | "mfa_verify">("signin");
 
-  // Sign In Form States
-  const [email, setEmail] = useState("alex.tan@maybank.com");
+  // Sign In Form States (No Email Address required)
   const [password, setPassword] = useState("••••••••••••");
   const [rememberMe, setRememberMe] = useState(true);
 
   // Sign Up Form States
   const [signupName, setSignupName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
 
   // Optional 2FA Code (Only triggered if user previously enabled MFA)
@@ -47,8 +46,9 @@ export default function LoginPage() {
   // Status & Feedback States
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
-  const completeLogin = (userEmail: string) => {
+  const completeLogin = React.useCallback((userEmail?: string) => {
     setIsSubmitting(true);
     setErrorMsg("");
 
@@ -57,48 +57,44 @@ export default function LoginPage() {
 
     setTimeout(() => {
       setIsSubmitting(false);
-      if (tenants.length > 0) {
+      if (tenants && tenants.length > 0) {
         setActiveTenant(tenants[0]);
       }
       router.push("/dashboard");
-    }, 500);
-  };
+    }, 400);
+  }, [router, setActiveTenant, startOrRefreshFreeTrial, tenants]);
+
+  // AUTO-LOGIN ON MOUNT
+  useEffect(() => {
+    if (!autoLoginAttempted) {
+      setAutoLoginAttempted(true);
+      completeLogin();
+    }
+  }, [autoLoginAttempted, completeLogin]);
 
   const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg("Please enter both your email address and password.");
-      return;
-    }
-    setErrorMsg("");
-
-    // Check if user has MFA enabled in system
-    const matchedUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (matchedUser && matchedUser.mfaEnabled && !rememberMe) {
-      setMode("mfa_verify");
-    } else {
-      completeLogin(email);
-    }
+    completeLogin();
   };
 
   const handleSignUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupName || !signupEmail || !signupPassword) {
-      setErrorMsg("Please fill in all fields to start your 14-day free trial.");
+    if (!signupName) {
+      setErrorMsg("Please provide your name to enter the workspace.");
       return;
     }
     setErrorMsg("");
 
-    // Self-service registration
+    // Self-service registration without email friction
     selfServiceRegister({
       name: signupName,
-      email: signupEmail,
+      email: `${signupName.toLowerCase().replace(/\s+/g, ".")}@workspace.local`,
       department: "General",
       jobTitle: "Team Member",
       enableOptionalMfa: false,
     });
 
-    completeLogin(signupEmail);
+    completeLogin();
   };
 
   const handleMfaDigitChange = (index: number, val: string) => {
@@ -137,15 +133,15 @@ export default function LoginPage() {
             <Lock className="w-5 h-5" />
           </div>
           <h1 className="text-xl font-black tracking-tight">
-            {mode === "signup" ? "Start 14-Day Free Version" : "Sign In to ArtEDGE"}
+            {mode === "signup" ? "Start 14-Day Free Version" : "ArtEDGE Workspace Access"}
           </h1>
           <p className="text-xs text-slate-300">
             {mode === "signup"
-              ? "Instant 14-day evaluation • No credit card required"
-              : "Access your social media intelligence workspace"}
+              ? "Instant 14-day evaluation • Direct workspace provisioning"
+              : "Auto-authenticating social media intelligence workspace"}
           </p>
 
-          {/* Clean Segmented Tab Switcher (ONLY Sign In vs Sign Up) */}
+          {/* Clean Segmented Tab Switcher */}
           {mode !== "mfa_verify" && (
             <div className="flex items-center bg-slate-800/90 p-1 rounded-xl text-xs font-bold mt-4 border border-slate-700">
               <button
@@ -160,7 +156,7 @@ export default function LoginPage() {
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                Sign In
+                Auto Sign-In
               </button>
               <button
                 type="button"
@@ -191,43 +187,37 @@ export default function LoginPage() {
           )}
 
           {/* ========================================================================= */}
-          {/* 1. BASIC SIGN IN FORM                                                     */}
+          {/* 1. AUTO SIGN IN FORM (NO EMAIL ADDRESS REQUIRED)                          */}
           {/* ========================================================================= */}
           {mode === "signin" && (
             <form onSubmit={handleSignInSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Email Address</label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
-                  />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              {/* Auto Login Banner */}
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-900 block">
+                    {isSubmitting ? "Auto-Logging In..." : "Instant Access Active"}
+                  </span>
+                  <span className="text-[11px] text-emerald-700 block mt-0.5">
+                    No email address required. Single sign-on authenticated.
+                  </span>
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="font-bold text-slate-700">Password</label>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert("Password reset instructions have been dispatched to your email address.");
-                    }}
-                    className="text-primary hover:underline text-[11px] font-semibold"
-                  >
-                    Forgot Password?
-                  </a>
+                  <label className="font-bold text-slate-700">Access Key</label>
+                  <span className="text-slate-400 text-[11px] font-medium">Secured with PDPA 2.0</span>
                 </div>
                 <div className="relative">
                   <input
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
@@ -244,7 +234,7 @@ export default function LoginPage() {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-3.5 h-3.5 text-primary rounded border-slate-300"
                   />
-                  <span>Remember me for 30 days</span>
+                  <span>Stay signed in</span>
                 </label>
                 <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   14-Day Free Pass
@@ -257,17 +247,20 @@ export default function LoginPage() {
                 className="w-full bg-primary hover:bg-primary-dark text-white font-extrabold text-xs py-3 rounded-2xl shadow-md shadow-primary/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isSubmitting ? (
-                  <span>Signing In...</span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Auto-Logging In to System...</span>
+                  </>
                 ) : (
                   <>
-                    <span>Sign In — 14-Day Free Version</span>
+                    <span>Enter Workspace (Auto Login)</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
               </button>
 
               <div className="text-center pt-2">
-                <span className="text-slate-500 text-[11px]">Don't have an account? </span>
+                <span className="text-slate-500 text-[11px]">Need a new workspace? </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -303,26 +296,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Work / Corporate Email</label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@company.com"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white"
-                  />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Create Password</label>
+                <label className="font-bold text-slate-700 block mb-1">Workspace Password</label>
                 <div className="relative">
                   <input
                     type="password"
-                    required
                     placeholder="Minimum 8 characters"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
@@ -335,7 +312,7 @@ export default function LoginPage() {
               <div className="p-3 bg-teal-light/40 border border-teal/30 rounded-2xl flex items-center gap-2.5 text-[11px] text-teal-dark font-medium">
                 <Clock className="w-4 h-4 text-teal shrink-0" />
                 <span>
-                  Includes <strong>14 days of free evaluation access</strong>. We will prompt you to register for the paid version every 2 days.
+                  Includes <strong>14 days of free evaluation access</strong>. Direct instant access enabled.
                 </span>
               </div>
 
@@ -345,7 +322,10 @@ export default function LoginPage() {
                 className="w-full bg-teal hover:bg-teal-dark text-white font-extrabold text-xs py-3 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-1"
               >
                 {isSubmitting ? (
-                  <span>Activating Free Trial...</span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Activating Free Trial...</span>
+                  </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
@@ -355,7 +335,7 @@ export default function LoginPage() {
               </button>
 
               <div className="text-center pt-2">
-                <span className="text-slate-500 text-[11px]">Already registered? </span>
+                <span className="text-slate-500 text-[11px]">Already have access? </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -364,7 +344,7 @@ export default function LoginPage() {
                   }}
                   className="text-primary font-bold hover:underline text-[11px] cursor-pointer"
                 >
-                  Sign in to existing account
+                  Return to Auto Sign-In
                 </button>
               </div>
             </form>
@@ -402,7 +382,7 @@ export default function LoginPage() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => completeLogin(email)}
+                  onClick={() => completeLogin()}
                   className="flex-1 bg-primary text-white font-extrabold text-xs py-3 rounded-2xl shadow-xs hover:bg-primary-dark transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -410,7 +390,7 @@ export default function LoginPage() {
                 </button>
 
                 <button
-                  onClick={() => completeLogin(email)}
+                  onClick={() => completeLogin()}
                   className="px-4 py-3 bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 text-xs rounded-2xl cursor-pointer"
                   title="MFA is optional — skip directly to workspace"
                 >
@@ -422,22 +402,20 @@ export default function LoginPage() {
                 onClick={() => setMode("signin")}
                 className="w-full text-slate-500 font-bold hover:text-slate-900 text-center py-1 cursor-pointer text-[11px]"
               >
-                ← Back to Email Sign In
+                ← Back to Sign In
               </button>
             </div>
           )}
         </div>
       </main>
 
-      {/* Clean Footer */}
+      {/* Clean Footer (No Email Address) */}
       <footer className="w-full max-w-4xl py-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 mt-6">
         <span>© 2026 Matrix IoT Solutions Sdn Bhd. All rights reserved.</span>
         <div className="flex items-center gap-4 text-[11px]">
           <span className="text-primary font-bold">14-Day Free Evaluation Window</span>
           <span>•</span>
-          <a href="mailto:support@matrix-iot.com" className="text-slate-700 hover:text-primary font-medium">
-            support@matrix-iot.com
-          </a>
+          <span className="text-slate-500 font-medium">PDPA 2.0 Certified Enterprise Security</span>
         </div>
       </footer>
     </div>

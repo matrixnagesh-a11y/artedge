@@ -1,13 +1,40 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTenant } from "@/context/TenantContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { TrialUpgradePromptModal } from "@/components/common/TrialUpgradePromptModal";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { isAuthenticated } = useTenant();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const hasSession = typeof window !== "undefined" && !!localStorage.getItem("artedge_auth_session");
+    if (!hasSession && !isAuthenticated) {
+      router.replace("/login");
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [isAuthenticated, router]);
+
+  if (isCheckingAuth && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm font-semibold tracking-wide">Verifying credentials...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-background text-slate-900">
       <Sidebar />
@@ -19,3 +46,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+

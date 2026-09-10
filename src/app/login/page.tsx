@@ -247,61 +247,24 @@ function LoginContent() {
       {/* Main Authentication Card */}
       <main className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-auto animate-scale-up">
         {/* Card Header */}
-        <div className="bg-slate-950 p-7 text-center space-y-1 relative border-b border-slate-800">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white mx-auto shadow-md mb-2">
-            <Lock className="w-5 h-5" />
+        <div className="bg-slate-950 p-7 text-center space-y-1.5 relative border-b border-slate-800">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-white mx-auto shadow-lg shadow-primary/20 mb-3">
+            <Lock className="w-6 h-6" />
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white">
+          <h1 className="text-xl font-extrabold tracking-tight text-white">
             {mode === "signin"
-              ? "Client & Superadmin Sign In"
+              ? "Sign In"
               : mode === "signup"
               ? "Register Client Workspace"
-              : "Secondary Authentication (2FA)"}
+              : "Two-Factor Authentication"}
           </h1>
           <p className="text-xs text-slate-400">
             {mode === "signin"
-              ? "Multi-client enterprise intelligence & sovereign data vault"
+              ? "Enter your corporate credentials to access your workspace"
               : mode === "signup"
               ? "Self-service onboarding • RM99/month Basic Tier"
-              : "Step 2: Enter the 6-digit verification code to proceed"}
+              : "Enter the 6-digit verification code to continue"}
           </p>
-
-          {/* Segmented Mode Switcher (Hidden in 2FA mode) */}
-          {mode !== "mfa_verify" && (
-            <div className="flex items-center bg-slate-900 p-1 rounded-xl text-xs font-bold mt-4 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("signin");
-                  setErrorMsg("");
-                  setSuccessMsg("");
-                }}
-                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  mode === "signin"
-                    ? "bg-primary text-white shadow-xs font-extrabold"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("signup");
-                  setErrorMsg("");
-                  setSuccessMsg("");
-                }}
-                className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                  mode === "signup"
-                    ? "bg-teal-600 text-white shadow-xs font-extrabold"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Register Client (RM99)</span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Form Body */}
@@ -419,15 +382,31 @@ function LoginContent() {
                 )}
               </button>
 
-              <div className="pt-2 text-center text-[11px] text-slate-400">
-                <span>Need login details or new client setup? </span>
-                <button
-                  type="button"
-                  onClick={() => setIsContactModalOpen(true)}
-                  className="text-primary font-bold hover:underline cursor-pointer"
-                >
-                  Contact support@matrix-iot.com
-                </button>
+              <div className="pt-3 text-center text-xs space-y-2 border-t border-slate-800">
+                <p className="text-slate-400">
+                  Need a new client workspace?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("signup");
+                      setErrorMsg("");
+                    }}
+                    className="text-primary font-bold hover:underline cursor-pointer"
+                  >
+                    Register Client (RM99/mo)
+                  </button>
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Or contact{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsContactModalOpen(true)}
+                    className="text-slate-400 hover:text-white underline cursor-pointer"
+                  >
+                    support@matrix-iot.com
+                  </button>{" "}
+                  for login details
+                </p>
               </div>
             </form>
           )}

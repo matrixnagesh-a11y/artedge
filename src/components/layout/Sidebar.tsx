@@ -35,6 +35,7 @@ export const Sidebar: React.FC = () => {
   const {
     activeTenant,
     setActiveTenant,
+    switchClientTenant,
     tenants,
     user,
     setUserRole,
@@ -107,8 +108,7 @@ export const Sidebar: React.FC = () => {
             <select
               value={activeTenant.id}
               onChange={(e) => {
-                const found = tenants.find((t) => t.id === e.target.value);
-                if (found) setActiveTenant(found);
+                switchClientTenant(e.target.value);
               }}
               className="w-full text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl px-3 py-2 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20"
             >

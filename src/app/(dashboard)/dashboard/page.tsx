@@ -70,6 +70,141 @@ export default function DashboardPage() {
     year: "Annual View (12 Months)",
   }[dateRange] || "Rolling 7-Day Window";
 
+  // Dynamically modulated metrics responsive to the active dateRange filter (Today, 7D, 30D, Quarter, Year)
+  const dynamicMetrics = useMemo(() => {
+    const primary = competitors[0];
+    const rival = competitors[1];
+    const isSolo = competitors.length <= 1;
+
+    // Base values from primary competitor or fallback
+    const baseSov = primary?.metrics.shareOfVoicePercent ?? (isSolo ? 100 : 46.0);
+    const baseSent = primary?.metrics.sentimentScore ?? 86.2;
+    const baseRisk = primary?.metrics.reputationRiskScore ?? 16.4;
+    const rivalBaseSov = rival?.metrics.shareOfVoicePercent ?? 32.0;
+
+    // Modifiers across horizons:
+    const rangeModifiers = {
+      today: {
+        sovDelta: isSolo ? 0 : 2.4,
+        rivalSovDelta: isSolo ? 0 : -1.2,
+        sentimentDelta: 2.1,
+        riskDelta: -2.6,
+        mentionTrend: "+24.8%",
+        riskNote: "Zero critical incidents in last 24h",
+        periodNote: "Vs. yesterday (24-hour cycle)",
+      },
+      "7d": {
+        sovDelta: 0,
+        rivalSovDelta: 0,
+        sentimentDelta: 0,
+        riskDelta: 0,
+        mentionTrend: "+18.4%",
+        riskNote: "Zero unmitigated critical incidents (7D)",
+        periodNote: "Vs. previous 7-day window",
+      },
+      "30d": {
+        sovDelta: isSolo ? 0 : -1.5,
+        rivalSovDelta: isSolo ? 0 : 1.5,
+        sentimentDelta: -2.8,
+        riskDelta: 3.2,
+        mentionTrend: "+12.6%",
+        riskNote: "1 minor advisory resolved (30D)",
+        periodNote: "Vs. previous month",
+      },
+      quarter: {
+        sovDelta: isSolo ? 0 : -3.2,
+        rivalSovDelta: isSolo ? 0 : 2.2,
+        sentimentDelta: -4.5,
+        riskDelta: 6.8,
+        mentionTrend: "+8.9%",
+        riskNote: "2 mitigated sentiment spikes over 90 days",
+        periodNote: "Vs. previous quarter",
+      },
+      year: {
+        sovDelta: isSolo ? 0 : -0.8,
+        rivalSovDelta: isSolo ? 0 : -0.3,
+        sentimentDelta: -1.2,
+        riskDelta: 1.8,
+        mentionTrend: "+15.2%",
+        riskNote: "Annual compliance & security cleared",
+        periodNote: "Vs. prior calendar year",
+      },
+    };
+
+    const mod = rangeModifiers[dateRange] || rangeModifiers["7d"];
+
+    const sovPercent = isSolo ? 100 : Number(Math.min(95, Math.max(20, baseSov + mod.sovDelta)).toFixed(1));
+    const rivalSovPercent = isSolo ? 0 : Number(Math.min(80, Math.max(10, rivalBaseSov + mod.rivalSovDelta)).toFixed(1));
+    const sentimentScore = Number(Math.min(98, Math.max(15, baseSent + mod.sentimentDelta)).toFixed(1));
+    const riskScore = Number(Math.min(95, Math.max(4, baseRisk + mod.riskDelta)).toFixed(1));
+
+    // Dynamic Sentiment traffic light status
+    let sentimentLabel = "Happy";
+    let sentimentColor = "text-green";
+    let sentimentBg = "bg-green";
+    let lightDots = { green: true, amber: false, red: false };
+
+    if (sentimentScore >= 85) {
+      sentimentLabel = "Very Happy";
+      sentimentColor = "text-green";
+      sentimentBg = "bg-green";
+      lightDots = { green: true, amber: false, red: false };
+    } else if (sentimentScore >= 70) {
+      sentimentLabel = "Happy";
+      sentimentColor = "text-green";
+      sentimentBg = "bg-green";
+      lightDots = { green: true, amber: false, red: false };
+    } else if (sentimentScore >= 50) {
+      sentimentLabel = "Neutral";
+      sentimentColor = "text-amber-500";
+      sentimentBg = "bg-amber-500";
+      lightDots = { green: false, amber: true, red: false };
+    } else if (sentimentScore >= 35) {
+      sentimentLabel = "Caution";
+      sentimentColor = "text-orange-500";
+      sentimentBg = "bg-orange-500";
+      lightDots = { green: false, amber: true, red: true };
+    } else {
+      sentimentLabel = "Critical";
+      sentimentColor = "text-coral";
+      sentimentBg = "bg-coral";
+      lightDots = { green: false, amber: false, red: true };
+    }
+
+    // Dynamic Reputation Risk badge
+    let riskLabel = "Low Risk";
+    let riskBadgeClass = "bg-green-light text-green";
+    if (riskScore <= 20) {
+      riskLabel = "Low Risk";
+      riskBadgeClass = "bg-green-light text-green";
+    } else if (riskScore <= 40) {
+      riskLabel = "Moderate Risk";
+      riskBadgeClass = "bg-amber-light text-amber-600";
+    } else if (riskScore <= 65) {
+      riskLabel = "Elevated Risk";
+      riskBadgeClass = "bg-orange-100 text-orange-600";
+    } else {
+      riskLabel = "Critical Risk";
+      riskBadgeClass = "bg-coral-light text-coral";
+    }
+
+    return {
+      sovPercent,
+      rivalSovPercent,
+      sentimentScore,
+      riskScore,
+      sentimentLabel,
+      sentimentColor,
+      sentimentBg,
+      lightDots,
+      riskLabel,
+      riskBadgeClass,
+      riskNote: mod.riskNote,
+      periodNote: mod.periodNote,
+      mentionTrend: mod.mentionTrend,
+    };
+  }, [competitors, dateRange]);
+
   return (
     <div id="executive-command-container" className="space-y-8 pb-16">
       {/* Top Welcome & Quick Actions */}
@@ -234,10 +369,10 @@ export default function DashboardPage() {
               {formatNumber(trendData.reduce((acc, curr) => acc + curr.mentions, 0) || 14250)}
             </span>
             <span className="text-xs font-bold text-green flex items-center gap-0.5">
-              <ArrowUpRight className="w-3.5 h-3.5" /> +18.4%
+              <ArrowUpRight className="w-3.5 h-3.5" /> {dynamicMetrics.mentionTrend}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Vs. previous period ({dateRangeLabel})</p>
+          <p className="text-[11px] text-slate-400 mt-2">Vs. previous period ({dynamicMetrics.periodNote})</p>
         </div>
 
         {/* Card 2: Share of Voice */}
@@ -252,7 +387,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900">
-              {competitors[0]?.metrics.shareOfVoicePercent || (competitors.length <= 1 ? 100 : 36.8)}%
+              {dynamicMetrics.sovPercent}%
             </span>
             <span className="px-2 py-0.5 text-[10px] font-bold bg-violet-light text-violet rounded-full">
               {competitors.length <= 1 ? "Solo Target (100%)" : `Rank #1 of ${competitors.length}`}
@@ -261,7 +396,7 @@ export default function DashboardPage() {
           <p className="text-[11px] text-slate-400 mt-2">
             {competitors.length <= 1
               ? "100% total profile ownership (no active contenders)"
-              : `Outperforming ${competitors[1]?.name || "Competitor"} (${competitors[1]?.metrics.shareOfVoicePercent || 24.5}%)`}
+              : `Outperforming ${competitors[1]?.name || "Competitor"} (${dynamicMetrics.rivalSovPercent}%)`}
           </p>
         </div>
 
@@ -272,24 +407,27 @@ export default function DashboardPage() {
               Sentiment Health
             </span>
             <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-green animate-pulse" />
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+              <span className={`w-2.5 h-2.5 rounded-full ${dynamicMetrics.lightDots.green ? "bg-green animate-pulse" : "bg-slate-200"}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${dynamicMetrics.lightDots.amber ? "bg-amber-500 animate-pulse" : "bg-slate-200"}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${dynamicMetrics.lightDots.red ? "bg-coral animate-pulse" : "bg-slate-200"}`} />
             </div>
           </div>
           <div className="flex items-baseline justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold text-green">Happy</span>
-              <span className="w-5 h-5 rounded-full bg-green flex items-center justify-center text-[10px] text-white font-bold">
+              <span className={`text-2xl font-extrabold ${dynamicMetrics.sentimentColor}`}>{dynamicMetrics.sentimentLabel}</span>
+              <span className={`w-5 h-5 rounded-full ${dynamicMetrics.sentimentBg} flex items-center justify-center text-[10px] text-white font-bold`}>
                 ●
               </span>
             </div>
             <span className="text-xs font-extrabold text-slate-900">
-              {competitors[0]?.metrics.sentimentScore || 86}/100
+              {dynamicMetrics.sentimentScore}/100
             </span>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-green to-amber h-2 rounded-full" style={{ width: `${competitors[0]?.metrics.sentimentScore || 86}%` }} />
+            <div
+              className={`bg-gradient-to-r ${dynamicMetrics.sentimentScore >= 70 ? "from-green to-amber" : dynamicMetrics.sentimentScore >= 50 ? "from-amber to-orange-500" : "from-orange-500 to-coral"} h-2 rounded-full transition-all duration-500`}
+              style={{ width: `${dynamicMetrics.sentimentScore}%` }}
+            />
           </div>
         </div>
 
@@ -305,13 +443,13 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-3xl font-extrabold text-slate-900">
-              {competitors[0]?.metrics.reputationRiskScore || 18} <span className="text-xs text-slate-400 font-medium">/ 100</span>
+              {dynamicMetrics.riskScore} <span className="text-xs text-slate-400 font-medium">/ 100</span>
             </span>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-green-light text-green rounded-full">
-              Low Risk
+            <span className={`px-2 py-0.5 text-[10px] font-bold ${dynamicMetrics.riskBadgeClass} rounded-full transition-all`}>
+              {dynamicMetrics.riskLabel}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Zero unmitigated critical incidents</p>
+          <p className="text-[11px] text-slate-400 mt-2">{dynamicMetrics.riskNote}</p>
         </div>
       </div>
 
@@ -417,26 +555,39 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              {competitors.map((comp) => (
-                <div key={comp.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    {comp.logoUrl ? (
-                      <img src={comp.logoUrl} alt={comp.name} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
-                    ) : (
-                      <span className={`w-2.5 h-2.5 rounded-full ${comp.isPrimary ? "bg-primary ring-2 ring-primary/30" : "bg-slate-300"}`} />
-                    )}
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 block truncate max-w-[140px]">{comp.name}</span>
-                      <span className="text-[10px] text-slate-400">
-                        {comp.metrics.shareOfVoicePercent}% SOV {comp.titleOrRole ? `• ${comp.titleOrRole}` : ""}
-                      </span>
+              {competitors.map((comp, idx) => {
+                const isPrimary = comp.isPrimary || idx === 0;
+                const displaySov = isPrimary
+                  ? dynamicMetrics.sovPercent
+                  : idx === 1
+                  ? dynamicMetrics.rivalSovPercent
+                  : Math.max(5, Number(((comp.metrics.shareOfVoicePercent * (100 - dynamicMetrics.sovPercent)) / (100 - (competitors[0]?.metrics.shareOfVoicePercent || 46))).toFixed(1)));
+
+                const displaySentiment = isPrimary
+                  ? dynamicMetrics.sentimentScore
+                  : Number(Math.max(20, Math.min(95, comp.metrics.sentimentScore + (dateRange === "today" ? 1.5 : dateRange === "quarter" ? -2.5 : 0))).toFixed(1));
+
+                return (
+                  <div key={comp.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      {comp.logoUrl ? (
+                        <img src={comp.logoUrl} alt={comp.name} className="w-7 h-7 rounded-full object-cover border border-slate-200" />
+                      ) : (
+                        <span className={`w-2.5 h-2.5 rounded-full ${comp.isPrimary ? "bg-primary ring-2 ring-primary/30" : "bg-slate-300"}`} />
+                      )}
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 block truncate max-w-[140px]">{comp.name}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {displaySov}% SOV {comp.titleOrRole ? `• ${comp.titleOrRole}` : ""}
+                        </span>
+                      </div>
                     </div>
+                    <span className={`text-xs font-extrabold ${displaySentiment >= 80 ? "text-green" : displaySentiment >= 50 ? "text-amber" : "text-coral"}`}>
+                      {displaySentiment}/100
+                    </span>
                   </div>
-                  <span className={`text-xs font-extrabold ${comp.metrics.sentimentScore >= 80 ? "text-green" : comp.metrics.sentimentScore >= 50 ? "text-amber" : "text-coral"}`}>
-                    {comp.metrics.sentimentScore}/100
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

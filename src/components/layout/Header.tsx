@@ -260,6 +260,32 @@ export const Header: React.FC = () => {
     });
   };
 
+  const handleDirectScanOrModal = async () => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      clearAllIndividuals();
+      setModalMode(entityType);
+      setIsPromptModalOpen(true);
+      return;
+    }
+    const names = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+    const primaryName = names[0];
+    const rivals = names.slice(1);
+    const isSingle = rivals.length === 0;
+
+    await replenishTenantData({
+      brandName: primaryName,
+      entityType: entityType,
+      isSingleEntity: isSingle,
+      competitorNames: isSingle ? [] : rivals,
+      industry: entityType === "individual" ? "Leadership & Public Life" : "Commercial Enterprise",
+      region: entityType === "individual" ? "Global / Regional" : "Malaysia",
+      prompt: isSingle ? `Direct intelligence scan for ${primaryName}` : `Direct comparative benchmark for ${names.join(", ")}`,
+      saveCurrentProject: true,
+    });
+    setSearchQuery("");
+  };
+
   const activeIndividuals = individuals.map((s) => s.trim()).filter(Boolean);
   const isSoloMode = activeIndividuals.length <= 1;
 
@@ -346,26 +372,14 @@ export const Header: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && searchQuery.trim()) {
-                  const names = searchQuery.split(",").map((s) => s.trim());
-                  setIndividuals([names[0] || "", names[1] || "", names[2] || "", names[3] || "", names[4] || ""]);
-                  setCommaInput(searchQuery);
-                  setModalMode(entityType);
-                  setIsPromptModalOpen(true);
+                if (e.key === "Enter") {
+                  handleDirectScanOrModal();
                 }
               }}
               className="w-full bg-slate-100 border border-slate-200 rounded-2xl pl-9 pr-24 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all"
             />
             <button
-              onClick={() => {
-                if (searchQuery.trim()) {
-                  const names = searchQuery.split(",").map((s) => s.trim());
-                  setIndividuals([names[0] || "", names[1] || "", names[2] || "", names[3] || "", names[4] || ""]);
-                  setCommaInput(searchQuery);
-                }
-                setModalMode(entityType);
-                setIsPromptModalOpen(true);
-              }}
+              onClick={handleDirectScanOrModal}
               className="absolute right-1.5 top-1 px-2.5 py-1 bg-gradient-to-r from-primary to-primary-dark text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-2xs hover:opacity-95 transition-all cursor-pointer"
             >
               <Sparkles className="w-3 h-3" />

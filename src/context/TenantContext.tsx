@@ -599,9 +599,93 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const switchClientTenant = (tenantId: string) => {
     const found = tenants.find((t) => t.id === tenantId);
-    if (found) {
-      setActiveTenant(found);
+    if (!found) return;
+
+    setActiveTenant(found);
+
+    // Map tenant configurations to their contextual brand, rivals, and domain
+    let brand = found.name;
+    let type: "company" | "individual" = found.mode === "personal_brand" ? "individual" : "company";
+    let rivals: string[] = [];
+    let industry = "Commercial Enterprise";
+    let region = "Malaysia";
+
+    if (found.slug === "maybank" || found.id === "tenant-01") {
+      brand = "Maybank";
+      type = "company";
+      rivals = ["CIMB", "Public Bank", "RHB", "Hong Leong Bank"];
+      industry = "Banking & Financial Services";
+      region = "Malaysia";
+    } else if (found.slug === "petronas" || found.id === "tenant-02") {
+      brand = "Petronas";
+      type = "company";
+      rivals = ["Shell Malaysia", "Chevron", "ExxonMobil", "TotalEnergies"];
+      industry = "Energy, Oil & Gas";
+      region = "Malaysia / ASEAN";
+    } else if (found.slug === "nexuspr" || found.id === "tenant-03") {
+      brand = "Nexus PR";
+      type = "company";
+      rivals = ["Edelman", "Ogilvy", "Weber Shandwick", "BCW"];
+      industry = "Strategic PR & Communications";
+      region = "Southeast Asia";
+    } else if (found.slug === "simedarby" || found.id === "tenant-04") {
+      brand = "Sime Darby";
+      type = "company";
+      rivals = ["UMW Holdings", "DRB-HICOM", "Sunway Group", "Gamuda"];
+      industry = "Industrial Conglomerate & Automotive";
+      region = "Malaysia";
+    } else if (found.slug === "xijinping" || found.id === "tenant-active") {
+      brand = "Xi Jinping";
+      type = "individual";
+      rivals = ["Joe Biden", "Narendra Modi", "Emmanuel Macron", "Anwar Ibrahim"];
+      industry = "Statesmanship & Global Diplomacy";
+      region = "Global / Asia";
+    } else {
+      brand = found.name.replace(/\s+(Enterprise|Intelligence|Workspace|Strategic|Corporate).*/i, "").trim() || found.name;
+      type = found.mode === "personal_brand" ? "individual" : "company";
+      rivals = type === "individual" ? ["Rival Figure A", "Rival Figure B"] : ["Competitor Brand 1", "Competitor Brand 2"];
     }
+
+    setEntityTypeState(type);
+    const newDataset = generateReplenishedDataset({
+      brandName: brand,
+      entityType: type,
+      competitorNames: rivals,
+      isSingleEntity: rivals.length === 0,
+      industry,
+      region,
+      prompt: `Intelligence telemetry and live benchmark for ${brand}`,
+      saveCurrentProject: false,
+    });
+
+    const isInd = type === "individual";
+    const newPrimaryEntity: Entity = {
+      id: `ent-${found.id}`,
+      tenantId: found.id,
+      name: brand,
+      type: isInd ? "individual" : "company",
+      websiteUrl: isInd
+        ? `https://${brand.toLowerCase().replace(/[^a-z0-9]/g, "")}.org`
+        : `https://${brand.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.my`,
+      socialUrls: {},
+      industry,
+      country: region,
+      state: isInd ? "Beijing" : "Wilayah Persekutuan",
+      city: isInd ? "Beijing" : "Kuala Lumpur",
+      aliases: [brand],
+      hashtags: [`#${brand.replace(/\s+/g, "")}`],
+      keywords: [brand, industry],
+      exclusions: [],
+      isPrimary: true,
+    };
+
+    setEntities([newPrimaryEntity]);
+    setCompetitors(newDataset.competitors);
+    setMentions(newDataset.mentions);
+    setLeads(newDataset.leads);
+    setRecommendations(newDataset.recommendations);
+    setCrisis(newDataset.crisis);
+    setIpscanNodes(newDataset.ipscanNodes);
   };
 
   const setUserRole = (role: UserRole) => {

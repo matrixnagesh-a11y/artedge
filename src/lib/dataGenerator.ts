@@ -225,22 +225,36 @@ export function generateReplenishedDataset(params: ReplenishParams) {
     }
   }
 
+  // Dynamic variance based on brand name and run timestamp so each scan and refresh is lively and distinctive
+  const brandSeed = brand.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0);
+  const sentJitter = Number(((brandSeed % 7) * 0.5 - 1.2 + ((Date.now() % 5) - 2) * 0.3).toFixed(1));
+  const riskJitter = Number((((brandSeed * 3) % 7) * 0.4 - 1.0 + ((Date.now() % 3) - 1) * 0.4).toFixed(1));
+  const sovJitter = Number((((brandSeed * 2) % 5) * 0.4 - 0.8).toFixed(1));
+
   // Dynamic Share of Voice distribution
   let primarySov = 100.0;
   let peerSovs: number[] = [];
 
   if (finalCompNames.length === 1) {
-    primarySov = 58.0;
-    peerSovs = [42.0];
+    primarySov = Number((58.0 + sovJitter).toFixed(1));
+    peerSovs = [Number((100.0 - primarySov).toFixed(1))];
   } else if (finalCompNames.length === 2) {
-    primarySov = 46.0;
-    peerSovs = [32.0, 22.0];
+    primarySov = Number((46.0 + sovJitter).toFixed(1));
+    const rem = 100.0 - primarySov;
+    peerSovs = [Number((rem * 0.59).toFixed(1)), Number((rem * 0.41).toFixed(1))];
   } else if (finalCompNames.length === 3) {
-    primarySov = 40.0;
-    peerSovs = [28.0, 20.0, 12.0];
+    primarySov = Number((40.0 + sovJitter).toFixed(1));
+    const rem = 100.0 - primarySov;
+    peerSovs = [Number((rem * 0.47).toFixed(1)), Number((rem * 0.33).toFixed(1)), Number((rem * 0.20).toFixed(1))];
   } else if (finalCompNames.length >= 4) {
-    primarySov = 38.4;
-    peerSovs = [26.2, 17.5, 11.4, 6.5];
+    primarySov = Number((38.4 + sovJitter).toFixed(1));
+    const rem = 100.0 - primarySov;
+    peerSovs = [
+      Number((rem * 0.42).toFixed(1)),
+      Number((rem * 0.28).toFixed(1)),
+      Number((rem * 0.18).toFixed(1)),
+      Number((rem * 0.12).toFixed(1)),
+    ];
   }
 
   let competitors: CompetitorComparison[] = [];
@@ -255,16 +269,16 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         entityType: "individual",
         titleOrRole: "Primary Candidate & Monitored Leader",
         metrics: {
-          mentionVolume: finalCompNames.length === 0 ? 21500 : 14820,
+          mentionVolume: finalCompNames.length === 0 ? 21500 : 14820 + (brandSeed % 900),
           shareOfVoicePercent: primarySov,
-          reach: finalCompNames.length === 0 ? 3200000 : 2450000,
-          engagementRate: 5.6,
-          sentimentScore: 86.2,
-          reputationRiskScore: 16.4,
-          credibilityIndex: 95.8,
-          leadIntentCount: 184,
-          brandVisibilityIndex: 91.2,
-          competitiveEdgeScore: 93.0,
+          reach: finalCompNames.length === 0 ? 3200000 : 2450000 + (brandSeed % 80000),
+          engagementRate: Number((5.6 + ((brandSeed % 5) - 2) * 0.2).toFixed(1)),
+          sentimentScore: Number(Math.min(96, Math.max(72, 86.2 + sentJitter)).toFixed(1)),
+          reputationRiskScore: Number(Math.min(35, Math.max(8, 16.4 + riskJitter)).toFixed(1)),
+          credibilityIndex: Number(Math.min(99, Math.max(85, 95.8 + sentJitter * 0.5)).toFixed(1)),
+          leadIntentCount: 184 + (brandSeed % 40),
+          brandVisibilityIndex: Number(Math.min(98, Math.max(80, 91.2 + sovJitter)).toFixed(1)),
+          competitiveEdgeScore: Number(Math.min(98, Math.max(80, 93.0 + sentJitter * 0.6)).toFixed(1)),
         },
         individualPillars: {
           localStanding: 94,
@@ -386,16 +400,16 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         entityType: "company",
         titleOrRole: "Enterprise Brand",
         metrics: {
-          mentionVolume: finalCompNames.length === 0 ? 24500 : 18450,
+          mentionVolume: finalCompNames.length === 0 ? 24500 : 18450 + (brandSeed % 950),
           shareOfVoicePercent: primarySov,
-          reach: finalCompNames.length === 0 ? 2500000 : 1850000,
-          engagementRate: 4.8,
-          sentimentScore: 84.5,
-          reputationRiskScore: 18.2,
-          credibilityIndex: 94.6,
-          leadIntentCount: 312,
-          brandVisibilityIndex: 88.4,
-          competitiveEdgeScore: 91.2,
+          reach: finalCompNames.length === 0 ? 2500000 : 1850000 + (brandSeed % 90000),
+          engagementRate: Number((4.8 + ((brandSeed % 5) - 2) * 0.2).toFixed(1)),
+          sentimentScore: Number(Math.min(95, Math.max(70, 84.5 + sentJitter)).toFixed(1)),
+          reputationRiskScore: Number(Math.min(38, Math.max(10, 18.2 + riskJitter)).toFixed(1)),
+          credibilityIndex: Number(Math.min(98, Math.max(82, 94.6 + sentJitter * 0.5)).toFixed(1)),
+          leadIntentCount: 312 + (brandSeed % 50),
+          brandVisibilityIndex: Number(Math.min(96, Math.max(78, 88.4 + sovJitter)).toFixed(1)),
+          competitiveEdgeScore: Number(Math.min(96, Math.max(78, 91.2 + sentJitter * 0.6)).toFixed(1)),
         },
         radarScores: {
           visibility: 88,

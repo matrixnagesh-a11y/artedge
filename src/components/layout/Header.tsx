@@ -38,6 +38,7 @@ import {
   MapPin,
   UserCheck,
   Swords,
+  Target,
 } from "lucide-react";
 
 export const Header: React.FC = () => {
@@ -103,6 +104,8 @@ export const Header: React.FC = () => {
   const [locationInput, setLocationInput] = useState(() => (primaryEntity?.city ? `${primaryEntity.city}, ${primaryEntity.country}` : "Beijing, China"));
   const [regionInput, setRegionInput] = useState(() => primaryEntity?.country || "Global / Asia");
   const [sourcesInput, setSourcesInput] = useState("https://x.com/diplomatic_wire, https://reuters.com, https://bloomberg.com");
+  const [inclusionInput, setInclusionInput] = useState("");
+  const [exclusionInput, setExclusionInput] = useState("");
   const [selectedChannels, setSelectedChannels] = useState<string[]>([
     "x",
     "news",
@@ -140,6 +143,24 @@ export const Header: React.FC = () => {
   };
 
   const individualPresets = [
+    {
+      label: "👤 Solo: B. Pannir Selvam",
+      names: ["B. Pannir Selvam"],
+      industry: "Malaysian Civic & Grassroots Leadership",
+      location: "Kuala Lumpur & Johor, Malaysia",
+      region: "Malaysia",
+      prompt: "Audit community welfare outreach, citizen accessibility, educational empowerment initiatives, and civic stature for B. Pannir Selvam.",
+      inclusion: "community welfare, grassroots outreach, education empowerment",
+    },
+    {
+      label: "🏛️ 5 Malaysian Leaders",
+      names: ["B. Pannir Selvam", "Anwar Ibrahim", "M. Saravanan", "Rafizi Ramli", "Anthony Loke"],
+      industry: "National & Community Leadership",
+      location: "Kuala Lumpur & Putrajaya, Malaysia",
+      region: "Malaysia",
+      prompt: "Benchmark public community standing, citizen accessibility, grassroots welfare advocacy, and socioeconomic delivery across 5 Malaysian leaders.",
+      inclusion: "grassroots welfare, public accessibility, civic representation",
+    },
     {
       label: "👤 Solo: Xi Jinping",
       names: ["Xi Jinping"],
@@ -233,6 +254,11 @@ export const Header: React.FC = () => {
     setLocationInput(preset.location);
     setRegionInput(preset.region);
     setPromptInput(preset.prompt);
+    if ((preset as any).inclusion) {
+      setInclusionInput((preset as any).inclusion);
+    } else {
+      setInclusionInput("");
+    }
   };
 
   const executeReplenishment = async () => {
@@ -242,6 +268,15 @@ export const Header: React.FC = () => {
     const primaryName = activeList[0] || (modalMode === "individual" ? "Nikhil Kumaraswamy" : "Maybank");
     const rivals = activeList.slice(1);
     const isSingle = rivals.length === 0;
+
+    const inclusionKeywords = inclusionInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const exclusionKeywords = exclusionInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     await replenishTenantData({
       brandName: primaryName,
@@ -257,6 +292,8 @@ export const Header: React.FC = () => {
       customSourceUrls: sourcesInput.split(",").map((s) => s.trim()).filter(Boolean),
       entityType: modalMode,
       saveCurrentProject: true, // Automatically auto-archives previous snapshot to Past Projects
+      inclusionKeywords,
+      exclusionKeywords,
     });
   };
 
@@ -980,6 +1017,53 @@ export const Header: React.FC = () => {
                   }
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white resize-none"
                 />
+              </div>
+
+              {/* Precision Accuracy & Crawl Relevance Tuning */}
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold text-slate-900">
+                      🎯 Precision Accuracy & Relevance Tuning
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Noise Filtering Active
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Must-Include Keywords (Comma-separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={inclusionInput}
+                      onChange={(e) => setInclusionInput(e.target.value)}
+                      placeholder="e.g. welfare, community, education, infrastructure"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <span className="text-[9px] text-slate-400 mt-1 block">
+                      Guarantees matches prioritize these core topics and boost relevance to 99%.
+                    </span>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Negative Exclusion Keywords (Blacklist)
+                    </label>
+                    <input
+                      type="text"
+                      value={exclusionInput}
+                      onChange={(e) => setExclusionInput(e.target.value)}
+                      placeholder="e.g. spam, casino, crypto, unrelated homonym"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-coral/20"
+                    />
+                    <span className="text-[9px] text-slate-400 mt-1 block">
+                      Discards any crawled mention containing these terms to eliminate false positives.
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

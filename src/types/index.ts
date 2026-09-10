@@ -298,6 +298,9 @@ export interface MentionItem {
   internalNote?: string;
   internalNotes?: string[];
   manuallyOverridden?: boolean;
+  relevanceScore?: number; // 0 - 100
+  relevanceExplanation?: string;
+  matchedKeywords?: string[];
 }
 
 export interface CompetitorComparison {

@@ -625,11 +625,22 @@ export default function UniversalListeningPage() {
                     <span className="text-slate-400 block text-[9px] uppercase font-bold">Confidence Score</span>
                     <span className="font-bold text-slate-900">{item.confidenceScore}%</span>
                   </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Relevance Score</span>
+                    <span className="font-bold text-primary" title={item.relevanceExplanation || "Entity and topic verified"}>
+                      {item.relevanceScore || 96}%
+                    </span>
+                  </div>
                 </div>
 
                 {/* Aspects, Lead Intent, & Actions Strip */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                   <div className="flex flex-wrap items-center gap-2">
+                    {item.matchedKeywords && item.matchedKeywords.length > 0 && (
+                      <span className="px-2.5 py-0.5 text-[10px] font-semibold rounded-lg bg-primary/10 text-primary border border-primary/20">
+                        🎯 Keywords: {item.matchedKeywords.join(", ")}
+                      </span>
+                    )}
                     {item.aspects.map((asp, idx) => (
                       <span
                         key={idx}

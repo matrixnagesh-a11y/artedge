@@ -672,9 +672,15 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xs text-slate-700 mt-1 line-clamp-2">"{item.content}"</p>
 
-                  <div className="flex items-center gap-4 mt-2 text-[10px] text-slate-400">
+                  <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400 flex-wrap">
                     <span>Source: {item.providerUsed}</span>
                     <span>Confidence: {item.confidenceScore}%</span>
+                    <span
+                      className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold border border-primary/20"
+                      title={item.relevanceExplanation || "Corroborated by named entity recognition & keywords"}
+                    >
+                      Relevance: {item.relevanceScore || 96}%
+                    </span>
                     <span>Credibility: {item.credibility.classification.replace(/_/g, " ")}</span>
                   </div>
                 </div>

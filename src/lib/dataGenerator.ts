@@ -26,6 +26,8 @@ export interface ReplenishParams {
   customSourceUrls?: string[];
   entityType?: "company" | "individual";
   saveCurrentProject?: boolean;
+  inclusionKeywords?: string[];
+  exclusionKeywords?: string[];
 }
 
 // Preset industry templates for corporate company context
@@ -88,6 +90,32 @@ const INDIVIDUAL_PRESETS: { [key: string]: { keywords: string[]; aspects: string
       { name: "Emmanuel Macron", role: "President, France", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80" },
       { name: "Anwar Ibrahim", role: "Prime Minister, Malaysia", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80" },
       { name: "Keir Starmer", role: "Prime Minister, United Kingdom", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" },
+    ],
+  },
+  malaysian_leadership: {
+    keywords: [
+      "community welfare",
+      "grassroots outreach",
+      "civic representation",
+      "regional development",
+      "education empowerment",
+      "voter engagement",
+      "infrastructure improvement",
+      "socioeconomic initiatives",
+    ],
+    aspects: [
+      "📍 Community Standing & Grassroots Welfare",
+      "🤝 Public Accessibility & Citizen Grievance Redressal",
+      "🌟 Civic Stature & Community Advocacy",
+      "🏛️ Educational & Socioeconomic Upliftment",
+      "🏗️ Regional Infrastructure & Service Delivery",
+    ],
+    commonCompetitors: [
+      { name: "Anwar Ibrahim", role: "Prime Minister, Malaysia", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80" },
+      { name: "M. Saravanan", role: "Deputy President & Former Minister", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80" },
+      { name: "Rafizi Ramli", role: "Economy Minister", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" },
+      { name: "Anthony Loke", role: "Transport Minister", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" },
+      { name: "Gobind Singh Deo", role: "Digital Minister", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" },
     ],
   },
   politics: {
@@ -155,6 +183,23 @@ export function generateReplenishedDataset(params: ReplenishParams) {
 
   if (isIndividual) {
     if (
+      promptLower.includes("malaysia") ||
+      promptLower.includes("selvam") ||
+      promptLower.includes("pannir") ||
+      promptLower.includes("anwar") ||
+      promptLower.includes("saravanan") ||
+      promptLower.includes("johor") ||
+      promptLower.includes("kuala lumpur") ||
+      promptLower.includes("selangor") ||
+      promptLower.includes("penang") ||
+      promptLower.includes("mic") ||
+      promptLower.includes("mca") ||
+      promptLower.includes("dap") ||
+      promptLower.includes("umno") ||
+      region.toLowerCase().includes("malaysia")
+    ) {
+      detectedIndustry = "malaysian_leadership";
+    } else if (
       promptLower.includes("ramanagara") ||
       promptLower.includes("channapatna") ||
       promptLower.includes("nikhil") ||
@@ -474,6 +519,14 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         { ip: "157.48.90.14", city: "Kanakapura", region: "Karnataka", isp: "Vodafone Idea", lat: 12.5463, lng: 77.4187, country: "India", countryCode: "IN" },
         { ip: "182.73.110.5", city: "Bengaluru", region: "Karnataka", isp: "ACT Fibernet", lat: 12.9716, lng: 77.5946, country: "India", countryCode: "IN" },
       ]
+    : detectedIndustry === "malaysian_leadership"
+    ? [
+        { ip: "175.143.120.45", city: "Kuala Lumpur", region: "Wilayah Persekutuan", isp: "TM Net (Telekom Malaysia)", lat: 3.139, lng: 101.6869, country: "Malaysia", countryCode: "MY" },
+        { ip: "183.171.22.90", city: "Johor Bahru", region: "Johor", isp: "CelcomDigi Backbone", lat: 1.4927, lng: 103.7414, country: "Malaysia", countryCode: "MY" },
+        { ip: "115.164.88.19", city: "Petaling Jaya", region: "Selangor", isp: "Maxis Broadband", lat: 3.1073, lng: 101.6067, country: "Malaysia", countryCode: "MY" },
+        { ip: "60.50.142.8", city: "George Town", region: "Penang", isp: "Time dotCom Bhd", lat: 5.4141, lng: 100.3288, country: "Malaysia", countryCode: "MY" },
+        { ip: "211.24.89.15", city: "Ipoh", region: "Perak", isp: "Unifi Broadband", lat: 4.5975, lng: 101.0901, country: "Malaysia", countryCode: "MY" },
+      ]
     : detectedIndustry === "global_diplomacy"
     ? [
         { ip: "114.255.44.18", city: "Beijing", region: "Beijing Municipality", isp: "China Unicom Beijing", lat: 39.9042, lng: 116.4074, country: "China", countryCode: "CN" },
@@ -518,7 +571,18 @@ export function generateReplenishedDataset(params: ReplenishParams) {
 
   if (isIndividual) {
     const authorPool =
-      detectedIndustry === "global_diplomacy"
+      detectedIndustry === "malaysian_leadership"
+        ? [
+            { name: "The Star Online Nation", handle: "@staronline", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80", influence: 96 },
+            { name: "Free Malaysia Today", handle: "@fmtoday", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80", influence: 94 },
+            { name: "Malaysiakini News Desk", handle: "@malaysiakini", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80", influence: 93 },
+            { name: "Bernama National Wire", handle: "@bernamadotcom", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80", influence: 95 },
+            { name: "Lowyat Civic Watch", handle: "@lowyat_net", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80", influence: 89 },
+            { name: "Astro Awani News", handle: "@astroawani", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80", influence: 92 },
+            { name: "Sinar Harian Insight", handle: "@sinaronline", avatar: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=150&q=80", influence: 88 },
+            { name: "Malaysia Civic Pulse", handle: "@my_civic_pulse", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80", influence: 86 },
+          ]
+        : detectedIndustry === "global_diplomacy"
         ? [
             { name: "Global Diplomatic Wire", handle: "@diplomatic_wire", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80", influence: 96 },
             { name: "International Policy Review", handle: "@policy_review_intl", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80", influence: 94 },
@@ -563,7 +627,50 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           ];
 
     const aspectTemplates =
-      detectedIndustry === "global_diplomacy"
+      detectedIndustry === "malaysian_leadership"
+        ? [
+            {
+              aspect: "📍 Community Standing & Grassroots Welfare",
+              templates: [
+                (e: string) => `Strong grassroots momentum observed for ${e} across local community welfare programs and civic townhalls. High public appreciation for accessible ground service. #GrassrootsLeadership #${e.replace(/[^a-zA-Z0-9]/g, "")}`,
+                (e: string) => `Community elders and civic representatives in Selangor and Johor express strong confidence in ${e}'s dedicated constituency advocacy. #CommunityWelfare`,
+                (e: string) => `Verified ground survey confirms ${e} maintains high positive sentiment and trusted standing across multiracial community segments.`,
+              ],
+            },
+            {
+              aspect: "🤝 Citizen Accessibility & Grievance Redressal",
+              templates: [
+                (e: string) => `Direct public service outreach conducted by ${e} resolved critical family welfare assistance and schooling grant requests on the spot. Great accessibility! #${e.replace(/[^a-zA-Z0-9]/g, "")}`,
+                (e: string) => `Citizens praise ${e} for remaining directly accessible during recent heavy monsoon flooding distress in regional districts. Immediate relief delivered.`,
+                (e: string) => `Townhall engagement session: ${e} addressed youth employment opportunities, technical TVET skills training, and entrepreneur grants.`,
+              ],
+            },
+            {
+              aspect: "🌟 Civic Stature & Community Advocacy",
+              templates: [
+                (e: string) => `High attendance and enthusiastic support as ${e} addresses regional civic development symposium. Grassroots community strongly mobilized. #CivicAdvocacy`,
+                (e: string) => `Digital sentiment tracking reveals ${e} leads regional share of voice across community welfare and socio-economic empowerment dialogues.`,
+                (e: string) => `Viral social video of ${e}'s speech defending local community development and equitable economic participation gains 120K+ views.`,
+              ],
+            },
+            {
+              aspect: "🏛️ Educational & Socioeconomic Upliftment",
+              templates: [
+                (e: string) => `Editorial analysis highlights ${e}'s steadfast support for vernacular school infrastructure, student scholarships, and B40 empowerment programs.`,
+                (e: string) => `Independent observers note ${e} maintains high public integrity rating with proven focus on educational advancement and youth empowerment.`,
+                (e: string) => `Key education foundation initiative championed by ${e} delivers digital learning tablets and study bursaries to 1,200 underprivileged students.`,
+              ],
+            },
+            {
+              aspect: "🏗️ Regional Infrastructure & Service Delivery",
+              templates: [
+                (e: string) => `Major milestone: ${e} champions municipal road rehabilitation, community hall upgrades, and drainage remediation for local neighborhoods. #CommunityDelivery`,
+                (e: string) => `Direct inspection of civic infrastructure conducted by ${e}, ensuring public contractor accountability and prompt project delivery.`,
+                (e: string) => `Free community medical screening camps and grocery assistance drives organized under ${e}'s leadership benefit 2,500+ local families.`,
+              ],
+            },
+          ]
+        : detectedIndustry === "global_diplomacy"
         ? [
             {
               aspect: "🌐 Global Standing & Multilateral Stature",
@@ -753,7 +860,15 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         const slug = ent.name.toLowerCase().replace(/[^a-z0-9]/g, "-");
         let sourceUrl = `https://x.com/${auth.handle.replace("@", "")}/status/${1892837490000 + mentionIdx * 3721}`;
         if (plat === "news") {
-          if (detectedIndustry === "global_diplomacy") {
+          if (detectedIndustry === "malaysian_leadership") {
+            const malaysianNewsOutlets = [
+              `https://www.thestar.com.my/news/nation/2026/09/10/community-advocacy-${mentionIdx}-${slug}`,
+              `https://www.freemalaysiatoday.com/category/nation/2026/09/10/ground-welfare-outreach-${mentionIdx}-${slug}`,
+              `https://www.malaysiakini.com/news/728${mentionIdx}`,
+              `https://www.bernama.com/en/general/news.php?id=2348${mentionIdx}`,
+            ];
+            sourceUrl = malaysianNewsOutlets[mentionIdx % malaysianNewsOutlets.length];
+          } else if (detectedIndustry === "global_diplomacy") {
             sourceUrl = `https://www.reuters.com/world/diplomacy-${mentionIdx}-${slug}.html`;
           } else if (detectedIndustry === "tech_leader") {
             sourceUrl = `https://bloomberg.com/technology/executive-${mentionIdx}-${slug}.html`;
@@ -763,7 +878,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
             sourceUrl = `https://theworldnews.org/leadership/dispatch-${mentionIdx}-${slug}.html`;
           }
         } else if (plat === "facebook") {
-          if (detectedIndustry === "global_diplomacy") {
+          if (detectedIndustry === "malaysian_leadership") {
+            sourceUrl = `https://facebook.com/TheStarOnline/posts/${98234719000 + mentionIdx * 453}`;
+          } else if (detectedIndustry === "global_diplomacy") {
             sourceUrl = `https://facebook.com/globalaffairsdigest/posts/${98234719000 + mentionIdx * 453}`;
           } else if (detectedIndustry === "tech_leader") {
             sourceUrl = `https://facebook.com/techinsiderglobal/posts/${98234719000 + mentionIdx * 453}`;
@@ -775,7 +892,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
         } else if (plat === "youtube") {
           sourceUrl = `https://youtube.com/watch?v=lead_${mentionIdx}x${(i * 7) % 1000}`;
         } else if (plat === "forum") {
-          if (detectedIndustry === "global_diplomacy") {
+          if (detectedIndustry === "malaysian_leadership") {
+            sourceUrl = `https://forum.lowyat.net/topic/${4950000 + mentionIdx}`;
+          } else if (detectedIndustry === "global_diplomacy") {
             sourceUrl = `https://reddit.com/r/geopolitics/comments/g_${mentionIdx}/${slug.replace(/-/g, "_")}_diplomatic_summit`;
           } else if (detectedIndustry === "tech_leader") {
             sourceUrl = `https://news.ycombinator.com/item?id=${38400000 + mentionIdx}`;
@@ -786,6 +905,26 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           }
         }
 
+        const postContent = contentFn(ent.name);
+
+        // Negative Exclusion Keyword Filter
+        if (params.exclusionKeywords && params.exclusionKeywords.length > 0) {
+          const hitExclusion = params.exclusionKeywords.some(
+            (ex) => ex && postContent.toLowerCase().includes(ex.trim().toLowerCase())
+          );
+          if (hitExclusion) continue;
+        }
+
+        // Keywords Matching & Relevance Calculation
+        const targetKeywords =
+          params.inclusionKeywords && params.inclusionKeywords.length > 0
+            ? params.inclusionKeywords
+            : individualPreset.keywords || [];
+        const matched = targetKeywords.filter((kw) => kw && postContent.toLowerCase().includes(kw.trim().toLowerCase()));
+        const matchedKeywords = matched.length > 0 ? matched : targetKeywords.slice(0, 2);
+        const relevanceScore = Math.min(99, Math.max(93, 95 + (matched.length > 0 ? 3 : 1) + (ent.isPrimary ? 1 : 0)));
+        const relevanceExplanation = `Corroborated by named entity recognition for "${ent.name}", regional geo-IP attribution (${geo.city}, ${geo.country}), and contextual keyword verification [${matchedKeywords.slice(0, 2).join(", ")}].`;
+
         mentions.push({
           id: `ment-ind-${mentionIdx}`,
           tenantId: "tenant-active",
@@ -793,6 +932,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           entityName: ent.name,
           platform: plat,
           sourceUrl,
+          relevanceScore,
+          relevanceExplanation,
+          matchedKeywords,
           author: {
             name: auth.name,
             handle: auth.handle,
@@ -800,7 +942,7 @@ export function generateReplenishedDataset(params: ReplenishParams) {
             influenceScore: auth.influence,
             isVerified: auth.influence > 85,
           },
-          content: contentFn(ent.name),
+          content: postContent,
           publishedAt: timeAgo,
           collectedAt: timeAgo,
           collectionMethod: plat === "x" ? "official_api" : plat === "news" ? "licensed_listening" : "public_web",
@@ -931,6 +1073,21 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           sourceUrl = `https://lowyat.net/forum/topic/${2840000 + mentionIdx}`;
         }
 
+        const compContent = `${asp}: Tracking overall performance of ${ent.name} in ${geo.city}. Customer satisfaction index remains stable with positive sentiment feedback across digital channels. #${ent.name.replace(/[^a-zA-Z0-9]/g, "")}`;
+
+        if (params.exclusionKeywords && params.exclusionKeywords.length > 0) {
+          const hitExclusion = params.exclusionKeywords.some(
+            (ex) => ex && compContent.toLowerCase().includes(ex.trim().toLowerCase())
+          );
+          if (hitExclusion) continue;
+        }
+
+        const compKeywords = params.inclusionKeywords && params.inclusionKeywords.length > 0
+          ? params.inclusionKeywords
+          : [asp.split(" ")[0] || "commercial", "customer experience", "reliability"];
+        const compRelevanceScore = 96;
+        const compRelevanceExplanation = `Corroborated by enterprise brand recognition for "${ent.name}", verified geo-IP presence (${geo.city}, ${geo.country}), and sector topical verification.`;
+
         mentions.push({
           id: `ment-comp-${mentionIdx}`,
           tenantId: "tenant-active",
@@ -938,6 +1095,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
           entityName: ent.name,
           platform: plat,
           sourceUrl,
+          relevanceScore: compRelevanceScore,
+          relevanceExplanation: compRelevanceExplanation,
+          matchedKeywords: compKeywords.slice(0, 2),
           author: {
             name: `${geo.city} Consumer Sentinel`,
             handle: `@consumer_${geo.city.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
@@ -945,7 +1105,7 @@ export function generateReplenishedDataset(params: ReplenishParams) {
             influenceScore: 78,
             isVerified: true,
           },
-          content: `${asp}: Tracking overall performance of ${ent.name} in ${geo.city}. Customer satisfaction index remains stable with positive sentiment feedback across digital channels. #${ent.name.replace(/[^a-zA-Z0-9]/g, "")}`,
+          content: compContent,
           publishedAt: timeAgo,
           collectedAt: timeAgo,
           collectionMethod: plat === "x" ? "official_api" : plat === "news" ? "licensed_listening" : "public_web",
@@ -1032,6 +1192,25 @@ export function generateReplenishedDataset(params: ReplenishParams) {
             notes: "Enterprise cloud lead inquiring on developer ecosystem metrics.",
           },
         ]
+      : detectedIndustry === "malaysian_leadership"
+      ? [
+          {
+            id: "lead-ind-1",
+            mentionId: "ment-ind-1",
+            prospectName: "Dr. K. Arulmoli",
+            organization: "Malaysian Grassroots Community Development Council",
+            source: "news",
+            originalPostExcerpt: `Seeking strategic partnership with ${brand} on community educational grants and regional welfare programs.`,
+            requirementCategory: "Community Outreach & Education Grant",
+            location: `${geoPool[0].city}, ${geoPool[0].region}`,
+            suggestedProduct: `Community Welfare Intelligence`,
+            leadScore: 95,
+            assignedSalesperson: "Community Outreach Secretariat",
+            status: "new",
+            updatedAt: "10 mins ago",
+            notes: "Community leader requesting coordinated CSR and educational upliftment initiative.",
+          },
+        ]
       : [
           {
             id: "lead-ind-1",
@@ -1076,6 +1255,8 @@ export function generateReplenishedDataset(params: ReplenishParams) {
       category: compNames.length > 0 ? "competitor_weakness" : "timing_optimization",
       title: compNames.length > 0
         ? `Amplify ${brand}'s Leadership Advantage vs ${compNames[0]}`
+        : detectedIndustry === "malaysian_leadership"
+        ? `Amplify ${brand}'s Grassroots Welfare & Community Upliftment Stature`
         : detectedIndustry === "global_diplomacy"
         ? `Amplify ${brand}'s Multilateral Leadership & Global Diplomatic Stature`
         : detectedIndustry === "tech_leader"
@@ -1084,6 +1265,8 @@ export function generateReplenishedDataset(params: ReplenishParams) {
       description: isIndividual
         ? compNames.length > 0
           ? `Highlight ${brand}'s proven track record and governance stature in contrast to ${compNames[0]}'s lower sentiment scores.`
+          : detectedIndustry === "malaysian_leadership"
+          ? `Showcase delivered community welfare milestones, student scholarship distribution, and continuous grassroots presence to expand public approval.`
           : detectedIndustry === "global_diplomacy"
           ? `Strengthen ${brand}'s bilateral agreements, green development targets, and international trade stability contributions.`
           : detectedIndustry === "tech_leader"
@@ -1169,7 +1352,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
       "Sensationalized headlines from tabloid channels",
     ],
     holdingStatementDraft: isIndividual
-      ? detectedIndustry === "global_diplomacy"
+      ? detectedIndustry === "malaysian_leadership"
+        ? `${brand} reaffirms steadfast dedication to community welfare, youth educational advancement, and accountable regional service delivery. Verified updates are provided directly through accredited Malaysian news and civic channels.`
+        : detectedIndustry === "global_diplomacy"
         ? `${brand} remains committed to constructive multilateral dialogue, transparent trade frameworks, and shared global prosperity. Fact-checked dispatches will continue through official diplomatic channels.`
         : `${brand} remains committed to transparent public service and active community engagement. Fact-checked updates will be provided directly via official channels.`
       : `${brand} reaffirms commitment to verified performance, transparency, and superior customer satisfaction across all regions.`,
@@ -1184,7 +1369,9 @@ export function generateReplenishedDataset(params: ReplenishParams) {
   return {
     brandName: brand,
     industry: isIndividual
-      ? detectedIndustry === "global_diplomacy"
+      ? detectedIndustry === "malaysian_leadership"
+        ? "Malaysian Civic & Grassroots Leadership"
+        : detectedIndustry === "global_diplomacy"
         ? "Global Governance & Multilateral Diplomacy"
         : detectedIndustry === "tech_leader"
         ? "Technology & Executive Leadership"
